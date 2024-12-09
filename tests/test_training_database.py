@@ -3,8 +3,11 @@ import re
 import pytest
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from server.models import Base, Training
+from server.models import Base, Card, Training
 from server.training_database import (
+    CardNotFound,
+    CardSpec,
+    CardSpecInvalid,
     TrainingDatabase,
     TrainingNotFound,
     TrainingSpec,
@@ -80,7 +83,7 @@ async def test_create_training_entry_fails_because_of_invalid_type(
     ],
 )
 async def test_create_training_entry_fails_because_of_invalid_date_timestamp(
-    training_database, training_type, training_used_slots, training_timestamp
+    training_type, training_used_slots, training_timestamp
 ):
     with pytest.raises(
         TrainingSpecInvalid,
@@ -201,3 +204,155 @@ async def test_get_all_training_entries(training_database, training_type):
 async def test_get_all_trainings_but_not_training_exists(training_database):
     trainings = await training_database.get_all_training_entries()
     assert not trainings
+
+
+@pytest.mark.parametrize(
+    "card_timestamp",
+    [
+        -1,
+        0,
+        1e3,
+        "some string",
+        list(),
+        set(),
+        dict(),
+    ],
+)
+async def test_create_card_spec_fails_because_of_invalid_date_timestamp(card_timestamp):
+    with pytest.raises(
+        CardSpecInvalid,
+        match=re.escape(
+            f"The timestamp of a card can not be below 0 and"
+            f" has to be of the type int but was: {card_timestamp}"
+            f" and of type: {type(card_timestamp)}",
+        ),
+    ):
+        CardSpec(
+            timestamp=card_timestamp,
+            slots=10,
+            cost=200,
+        )
+
+
+@pytest.mark.parametrize(
+    "card_cost",
+    [
+        -1,
+        0,
+        1e3,
+        "some string",
+        list(),
+        set(),
+        dict(),
+    ],
+)
+async def test_create_card_spec_fails_because_of_invalid_card_cost(card_cost):
+    with pytest.raises(
+        CardSpecInvalid,
+        match=re.escape(
+            f"The cost of a card can not be below 0 and"
+            f" has to be of the type int but was: {card_cost}"
+            f" and of type: {type(card_cost)}",
+        ),
+    ):
+        CardSpec(
+            timestamp=1,
+            slots=10,
+            cost=card_cost,
+        )
+
+
+@pytest.mark.parametrize(
+    "card_slots",
+    [
+        -1,
+        0,
+        1e3,
+        "some string",
+        list(),
+        set(),
+        dict(),
+    ],
+)
+async def test_create_card_spec_fails_because_of_invalid_card_slots(card_slots):
+    with pytest.raises(
+        CardSpecInvalid,
+        match=re.escape(
+            f"The slots of a card can not be below 0 and"
+            f" has to be of the type int but was: {card_slots}"
+            f" and of type: {type(card_slots)}",
+        ),
+    ):
+        CardSpec(
+            timestamp=1,
+            slots=card_slots,
+            cost=1,
+        )
+
+
+async def test_create_card_entry(training_database):
+    timestamp = 1
+    slots = 10
+    card_cost = 200
+    card = await training_database.create_card_entry(
+        card_spec=CardSpec(
+            timestamp=timestamp,
+            slots=slots,
+            cost=card_cost,
+        )
+    )
+
+    assert card.timestamp == timestamp
+    assert card.slots == slots
+    print(type(card.cost))
+    assert card.cost == card_cost
+
+
+async def test_get_card_entry_by_id(training_database):
+    timestamp = 1
+    slots = 10
+    card_cost = 200
+    card = await training_database.create_card_entry(
+        card_spec=CardSpec(
+            timestamp=timestamp,
+            slots=slots,
+            cost=card_cost,
+        )
+    )
+
+    actual_card: Card = await training_database.get_card_entry_by_id(card_id=card.id)
+
+    assert actual_card.timestamp == timestamp
+    assert actual_card.cost == card_cost
+    assert actual_card.slots == slots
+
+
+async def test_get_card_entry_by_id_fails_if_not_existing(training_database):
+    card_id = "some-id"
+    with pytest.raises(
+        CardNotFound,
+        match=f"The requested card entry with id: {card_id} does not exist",
+    ):
+        await training_database.get_card_entry_by_id(card_id=card_id)
+
+
+async def test_get_all_card_entries(training_database):
+    card_specs = [
+        CardSpec(
+            timestamp=i + 1,
+            cost=200 + 1,
+            slots=i + 1,
+        )
+        for i in range(4)
+    ]
+    for card_spec in card_specs:
+        await training_database.create_card_entry(card_spec=card_spec)
+
+    cards = await training_database.get_all_card_entries()
+
+    assert len(cards) == 4
+
+
+async def test_get_all_cards_but_not_cards_exists(training_database):
+    cards = await training_database.get_all_card_entries()
+    assert not cards

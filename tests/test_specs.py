@@ -28,6 +28,7 @@ async def test_create_training_entry_fails_because_of_invalid_type(
             timestamp=training_timestamp,
             type=training_type,
             used_slots=training_used_slots,
+            card_id="some_string",
         )
 
 
@@ -58,6 +59,7 @@ async def test_create_training_entry_fails_because_of_invalid_date_timestamp(
             timestamp=training_timestamp,
             type=training_type,
             used_slots=training_used_slots,
+            card_id="some_string",
         )
 
 
@@ -88,7 +90,20 @@ async def test_create_training_entry_fails_because_of_invalid_used_slots(
             timestamp=training_timestamp,
             type=training_type,
             used_slots=used_slots,
+            card_id="some_string",
         )
+
+
+@pytest.mark.parametrize("card_id", [list(), dict(), set(), None, -1, 1e2, 0])
+def test_create_training_spec_fails_because_of_invalid_card_id(card_id, training_type):
+    with pytest.raises(
+        TrainingSpecInvalid,
+        match=re.escape(
+            f"The card_id of a training has to be of type"
+            f" str but was: {card_id} and of type: {type(card_id)}",
+        ),
+    ):
+        TrainingSpec(timestamp=1, type=training_type, used_slots=1, card_id=card_id)
 
 
 @pytest.mark.parametrize(

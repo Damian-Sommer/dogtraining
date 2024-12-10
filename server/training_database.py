@@ -6,6 +6,7 @@ import attrs
 from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.orm import selectinload
 
 from server.models import Card, Training
 
@@ -21,6 +22,7 @@ class TrainingSpec:
     timestamp: int = attrs.field()
     type: TrainingType = attrs.field()
     used_slots: int = attrs.field()
+    card_id: str = attrs.field()
 
     @type.validator
     def check_type(self, attribute, value):
@@ -41,6 +43,13 @@ class TrainingSpec:
         if not isinstance(value, int) or value <= 0:
             raise TrainingSpecInvalid(
                 f"The used_slots of a training can not be below 0 and has to be of the type int but was: {value} and of type: {type(value)}",
+            )
+
+    @card_id.validator
+    def check_card_id(self, attribute, value):
+        if not isinstance(value, str):
+            raise TrainingSpecInvalid(
+                f"The card_id of a training has to be of type str but was: {value} and of type: {type(value)}",
             )
 
 
@@ -85,6 +94,7 @@ class TrainingDatabase:
                     timestamp=training_spec.timestamp,
                     type=str(training_spec.type),
                     used_slots=training_spec.used_slots,
+                    card_id=training_spec.card_id,
                 )
                 session.add(training)
                 await session.flush()
@@ -96,7 +106,9 @@ class TrainingDatabase:
             async with session.begin():
                 try:
                     result = await session.execute(
-                        select(Training).where(Training.id == training_id)
+                        select(Training)
+                        .where(Training.id == training_id)
+                        .options(selectinload(Training.card))
                     )
                     return result.scalars().one()
                 except NoResultFound:
@@ -107,7 +119,9 @@ class TrainingDatabase:
     async def get_all_training_entries(self) -> List[Training]:
         async with self.async_session() as session:
             async with session.begin():
-                result = await session.execute(select(Training))
+                result = await session.execute(
+                    select(Training).options(selectinload(Training.card))
+                )
                 return result.scalars().all()
 
     async def create_card_entry(self, *, card_spec: CardSpec) -> Card:
@@ -129,7 +143,9 @@ class TrainingDatabase:
             async with session.begin():
                 try:
                     result = await session.execute(
-                        select(Card).where(Card.id == card_id)
+                        select(Card)
+                        .where(Card.id == card_id)
+                        .options(selectinload(Card.trainings))
                     )
                     return result.scalars().one()
                 except NoResultFound:
@@ -140,7 +156,9 @@ class TrainingDatabase:
     async def get_all_card_entries(self) -> List[Card]:
         async with self.async_session() as session:
             async with session.begin():
-                result = await session.execute(select(Card))
+                result = await session.execute(
+                    select(Card).options(selectinload(Card.trainings))
+                )
                 return result.scalars().all()
 
 

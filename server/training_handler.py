@@ -1,6 +1,7 @@
 from aiohttp import web
 
 from server.training_database import (
+    CardFull,
     CardNotFound,
     CardSpec,
     DatabaseException,
@@ -69,7 +70,7 @@ class TrainingHandler:
             return web.json_response(
                 data=[training.as_dict() for training in trainings]
             )
-        except (InvalidPayload, CardNotFound) as e:
+        except (InvalidPayload, CardNotFound, CardFull) as e:
             return web.json_response(
                 status=400,
                 data={

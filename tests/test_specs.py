@@ -107,6 +107,20 @@ def test_create_training_spec_fails_because_of_invalid_card_id(
             timestamp=1, type=training_type, dogs=training_dogs, card_id=card_id
         )
 
+@pytest.mark.parametrize("new_card_id", [list(), dict(), set(), -1, 1e2, 0])
+def test_create_training_spec_fails_because_of_invalid_card_id(
+    new_card_id, training_type, training_dogs
+):
+    with pytest.raises(
+        TrainingSpecInvalid,
+        match=re.escape(
+            f"The new_card_id of a training has to be of type"
+            f" str or None but was: {new_card_id} and of type: {type(new_card_id)}",
+        ),
+    ):
+        TrainingSpec(
+            timestamp=1, type=training_type, dogs=training_dogs, card_id="some-string", new_card_id=new_card_id
+        )
 
 @pytest.mark.parametrize(
     "card_timestamp",

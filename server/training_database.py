@@ -23,6 +23,7 @@ class TrainingSpec:
     type: TrainingType = attrs.field()
     dogs: List[str] = attrs.field()
     card_id: str = attrs.field()
+    new_card_id: str = attrs.field(default=None)
 
     @type.validator
     def check_type(self, attribute, value):
@@ -56,6 +57,13 @@ class TrainingSpec:
                 f"The card_id of a training has to be of type str but was: {value} and of type: {type(value)}",
             )
 
+    @new_card_id.validator
+    def check_new_card_id(self, attribute, value):
+        if value is not None and not isinstance(value, str):
+            raise TrainingSpecInvalid(
+                f"The new_card_id of a training has to be of type str or None but was: {value} and of type: {type(value)}",
+            )
+
     @classmethod
     def from_json(cls, *, data):
         keys = ["timestamp", "type", "dogs", "card_id"]
@@ -69,6 +77,7 @@ class TrainingSpec:
             type=data["type"],
             dogs=data["dogs"],
             card_id=data["card_id"],
+            new_card_id=data.get("new_card_id", None)
         )
 
 
@@ -118,19 +127,15 @@ class TrainingDatabase:
         engine = create_async_engine(connection)
         self.async_session = async_sessionmaker(engine, expire_on_commit=False)
 
-    async def create_training_entry(self, *, training_spec) -> List[Training]:
+    async def create_training_entry(self, *, training_spec: TrainingSpec) -> List[Training]:
+        card: Card = await self.get_card_entry_by_id(card_id=training_spec.card_id)
         async with self.async_session() as session:
             async with session.begin():
-                try:
-                    card = await session.execute(
-                        select(Card).where(Card.id == training_spec.card_id)
-                    )
-                    card.scalars().one()
-                except exc.NoResultFound:
-                    raise CardNotFound(
-                        f"There is no card with the specified card_id: {training_spec.card_id}"
-                    )
-                trainings: List[Training] = [
+                if len(card.trainings) + len(training_spec.dogs) > card.slots and training_spec.new_card_id is None:
+                    raise CardFull(f"The card: {card.id} has not enough slots for this training entry, please create a new card entry with and provide it as 'new_card' in the payload.")
+                available_slots = card.slots - len(card.trainings)
+
+                trainings_old_card: List[Training] = [
                     Training(
                         id=str(uuid.uuid4()),
                         timestamp=training_spec.timestamp,
@@ -138,8 +143,22 @@ class TrainingDatabase:
                         dog=dog,
                         card_id=training_spec.card_id,
                     )
-                    for dog in training_spec.dogs
+                    for dog in training_spec.dogs[:available_slots]
                 ]
+
+                trainings_new_card: List[Training] = [
+                    Training(
+                        id=str(uuid.uuid4()),
+                        timestamp=training_spec.timestamp,
+                        type=str(training_spec.type),
+                        dog=dog,
+                        card_id=training_spec.new_card_id,
+                    )
+                    for dog in training_spec.dogs[available_slots:]
+                ]
+
+                trainings = trainings_old_card + trainings_new_card
+
                 session.add_all(trainings)
                 await session.flush()
                 await session.commit()
@@ -227,4 +246,7 @@ class CardSpecInvalid(Exception):
 
 
 class InvalidPayload(Exception):
+    pass
+
+class CardFull(Exception):
     pass

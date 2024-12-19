@@ -2,6 +2,7 @@ import pytest
 
 from server.models import Card, Training
 from server.training_database import (
+    CardFull,
     CardNotFound,
     CardSpec,
     TrainingNotFound,
@@ -93,7 +94,7 @@ async def test_get_all_training_entries(training_database, training_type):
     card = await training_database.create_card_entry(
         card_spec=CardSpec(
             timestamp=1,
-            slots=1,
+            slots=6,
             cost=2,
         )
     )
@@ -278,3 +279,31 @@ async def test_get_card_entry_as_dict(
             slots=card.slots,
         ).items()
     )
+
+async def test_create_training_entry_but_card_is_full_raises_exception(training_database, create_card_entry,training_timestamp,training_type):
+    card = await create_card_entry()
+    with pytest.raises(CardFull, match=f"The card: {card.id} has not enough slots for this training entry, please create a new card entry with and provide it as 'new_card' in the payload."):
+        await training_database.create_training_entry(
+            training_spec=TrainingSpec(
+                timestamp=training_timestamp,
+                card_id=card.id,
+                type=training_type,
+                dogs=["some-0", "some-1"],
+            )
+        )
+
+async def test_create_training_entry_but_assign_overflowing_trainings_to_new_card(training_database, create_card_entry, training_timestamp, training_type):
+    card = await create_card_entry()
+    card_new = await create_card_entry()
+    trainings = await training_database.create_training_entry(
+        training_spec=TrainingSpec(
+            timestamp=training_timestamp,
+            card_id=card.id,
+            new_card_id=card_new.id,
+            type=training_type,
+            dogs=["some-0", "some-1"],
+        )
+    )
+
+    assert trainings[0].card_id == card.id
+    assert trainings[1].card_id == card_new.id

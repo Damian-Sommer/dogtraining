@@ -2,6 +2,7 @@ import attrs
 import pytest
 from aiohttp import web
 
+from server.models import Card
 from server.training_database import CardSpec, TrainingSpec
 from server.training_handler import TrainingHandler
 
@@ -116,7 +117,7 @@ async def test_create_training_entry_but_card_does_not_exist(
     response = await client.post("/trainings", json=attrs.asdict(training_spec))
     assert response.status == 400
     assert await response.json() == {
-        "error": f"There is no card with the specified card_id: {card_id}"
+        "error": f"The requested card entry with id: {card_id} does not exist"
     }
 
 
@@ -140,4 +141,55 @@ async def test_create_training_entry_with_valid_data_succeeds(
         timestamp=training_timestamp,
         dog=training_dogs[0],
         type=training_type,
+    ).items()
+
+async def test_create_training_entry_but_card_will_be_overflown_raises_exception(
+        client,
+        create_card_entry,
+        training_type,
+        training_timestamp,
+):
+    card = await create_card_entry()
+    training_spec = TrainingSpec(
+        timestamp=training_timestamp,
+        type=training_type,
+        dogs=["some", "dog"],
+        card_id=card.id,
+    )
+    response = await client.post("/trainings", json=attrs.asdict(training_spec))
+    assert response.status == 400
+    assert await response.json() == {
+        "error": f"The card: {card.id} has not enough slots for this training entry, please create a new card entry with and provide it as 'new_card' in the payload.",
+    }
+
+async def test_create_training_entry_but_card_will_be_overflown_raises_exception(
+        client,
+        create_card_entry,
+        training_type,
+        training_timestamp,
+):
+    dogs = ["some", "dog"]
+    card: Card = await create_card_entry()
+    card_new: Card = await create_card_entry()
+    training_spec = TrainingSpec(
+        timestamp=training_timestamp,
+        type=training_type,
+        dogs=dogs,
+        card_id=card.id,
+        new_card_id=card_new.id,
+    )
+    response = await client.post("/trainings", json=attrs.asdict(training_spec))
+    assert response.status == 200
+    response_json = await response.json()
+    assert response_json[0].items() >= dict(
+        timestamp=training_timestamp,
+        dog=dogs[0],
+        type=training_type,
+        card_id=card.id
+    ).items()
+    assert response_json[1].items() >= dict(
+        timestamp=training_timestamp,
+        dog=dogs[1],
+        type=training_type,
+        card_id=card_new.id
     ).items()

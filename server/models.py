@@ -15,7 +15,7 @@ class Training(Base):
     )
     timestamp: Mapped[int] = mapped_column(Integer, nullable=False)
     type: Mapped[str] = mapped_column(String, nullable=False)
-    used_slots: Mapped[int] = mapped_column(Integer, nullable=False)
+    dog: Mapped[str] = mapped_column(String, nullable=False)
     card_id = mapped_column(String, ForeignKey("card.id"), nullable=False)
 
     card = relationship("Card", uselist=False, back_populates="trainings")
@@ -25,7 +25,7 @@ class Training(Base):
             id=self.id,
             timestamp=self.timestamp,
             type=self.type,
-            used_slots=self.used_slots,
+            dog=self.dog,
             card_id=self.card_id,
         )
 

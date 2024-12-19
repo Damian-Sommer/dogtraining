@@ -21,7 +21,7 @@ class TrainingType(StrEnum):
 class TrainingSpec:
     timestamp: int = attrs.field()
     type: TrainingType = attrs.field()
-    used_slots: int = attrs.field()
+    dogs: List[str] = attrs.field()
     card_id: str = attrs.field()
 
     @type.validator
@@ -38,11 +38,15 @@ class TrainingSpec:
                 f"The timestamp of a training can not be below 0 and has to be of the type int but was: {value} and of type: {type(value)}",
             )
 
-    @used_slots.validator
-    def check_used_slots(self, attribute, value):
-        if not isinstance(value, int) or value <= 0:
+    @dogs.validator
+    def check_dogs(self, attribute, value):
+        if (
+            not isinstance(value, list)
+            or len(value) == 0
+            or not all(isinstance(item, str) for item in value)
+        ):
             raise TrainingSpecInvalid(
-                f"The used_slots of a training can not be below 0 and has to be of the type int but was: {value} and of type: {type(value)}",
+                f"The dogs of a training have to be of type: List[str], but was: {type(value)}",
             )
 
     @card_id.validator
@@ -54,7 +58,7 @@ class TrainingSpec:
 
     @classmethod
     def from_json(cls, *, data):
-        keys = ["timestamp", "type", "used_slots", "card_id"]
+        keys = ["timestamp", "type", "dogs", "card_id"]
         for k in keys:
             if k not in data:
                 raise InvalidPayload(
@@ -63,7 +67,7 @@ class TrainingSpec:
         return cls(
             timestamp=data["timestamp"],
             type=data["type"],
-            used_slots=data["used_slots"],
+            dogs=data["dogs"],
             card_id=data["card_id"],
         )
 
@@ -114,7 +118,7 @@ class TrainingDatabase:
         engine = create_async_engine(connection)
         self.async_session = async_sessionmaker(engine, expire_on_commit=False)
 
-    async def create_training_entry(self, *, training_spec) -> Training:
+    async def create_training_entry(self, *, training_spec) -> List[Training]:
         async with self.async_session() as session:
             async with session.begin():
                 try:
@@ -126,17 +130,20 @@ class TrainingDatabase:
                     raise CardNotFound(
                         f"There is no card with the specified card_id: {training_spec.card_id}"
                     )
-                training: Training = Training(
-                    id=str(uuid.uuid4()),
-                    timestamp=training_spec.timestamp,
-                    type=str(training_spec.type),
-                    used_slots=training_spec.used_slots,
-                    card_id=training_spec.card_id,
-                )
-                session.add(training)
+                trainings: List[Training] = [
+                    Training(
+                        id=str(uuid.uuid4()),
+                        timestamp=training_spec.timestamp,
+                        type=str(training_spec.type),
+                        dog=dog,
+                        card_id=training_spec.card_id,
+                    )
+                    for dog in training_spec.dogs
+                ]
+                session.add_all(trainings)
                 await session.flush()
                 await session.commit()
-                return training
+                return trainings
 
     async def get_training_entry_by_id(self, *, training_id) -> Training:
         async with self.async_session() as session:

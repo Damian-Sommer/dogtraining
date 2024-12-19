@@ -30,7 +30,7 @@ async def test_get_all_trainings(client, create_card_entry, create_training_entr
     assert response.status == 200
     trainings = await response.json()
     assert len(trainings) == 1
-    assert trainings == [training.as_dict()]
+    assert trainings == [training[0].as_dict()]
 
 
 async def test_return_exception_if_training_does_not_exist(client):
@@ -46,10 +46,10 @@ async def test_return_exception_if_training_does_not_exist(client):
 async def test_get_training_by_id(client, create_card_entry, create_training_entry):
     card = await create_card_entry()
     training = await create_training_entry(card_id=card.id)
-    response = await client.get(f"/trainings/{training.id}")
+    response = await client.get(f"/trainings/{training[0].id}")
     assert response.status == 200
     training_resp = await response.json()
-    assert training_resp == training.as_dict()
+    assert training_resp == training[0].as_dict()
 
 
 async def test_get_all_card_entries(client, create_card_entry):
@@ -99,18 +99,18 @@ async def test_create_training_entry_with_invalid_payload_fails(client):
     response = await client.post("/trainings", json=dict(some="value"))
     assert response.status == 400
     assert await response.json() == {
-        "error": f"You have to provide a payload with the following keys: {["timestamp", "type", "used_slots", "card_id"]}"
+        "error": f"You have to provide a payload with the following keys: {["timestamp", "type", "dogs", "card_id"]}"
     }
 
 
 async def test_create_training_entry_but_card_does_not_exist(
-    client, training_timestamp, training_type, training_used_slots
+    client, training_timestamp, training_type, training_dogs
 ):
     card_id = "some-id"
     training_spec = TrainingSpec(
         timestamp=training_timestamp,
         type=training_type,
-        used_slots=training_used_slots,
+        dogs=training_dogs,
         card_id=card_id,
     )
     response = await client.post("/trainings", json=attrs.asdict(training_spec))
@@ -125,15 +125,19 @@ async def test_create_training_entry_with_valid_data_succeeds(
     create_card_entry,
     training_timestamp,
     training_type,
-    training_used_slots,
+    training_dogs,
 ):
     card = await create_card_entry()
     training_spec = TrainingSpec(
         timestamp=training_timestamp,
         type=training_type,
-        used_slots=training_used_slots,
+        dogs=training_dogs,
         card_id=card.id,
     )
     response = await client.post("/trainings", json=attrs.asdict(training_spec))
     assert response.status == 200
-    assert (await response.json()).items() >= attrs.asdict(training_spec).items()
+    assert (await response.json())[0].items() >= dict(
+        timestamp=training_timestamp,
+        dog=training_dogs[0],
+        type=training_type,
+    ).items()

@@ -16,8 +16,8 @@ def training_timestamp():
 
 
 @pytest.fixture
-def training_used_slots():
-    return 1
+def training_dogs():
+    return ["some-dog"]
 
 
 @pytest.fixture
@@ -63,7 +63,7 @@ def create_training_entry(
     training_database: TrainingDatabase,
     training_timestamp,
     training_type,
-    training_used_slots,
+    training_dogs,
 ):
     async def create_entry(card_id):
         return await training_database.create_training_entry(
@@ -71,7 +71,7 @@ def create_training_entry(
                 timestamp=training_timestamp,
                 card_id=card_id,
                 type=training_type,
-                used_slots=training_used_slots,
+                dogs=training_dogs,
             )
         )
 

@@ -13,7 +13,7 @@ from server.training_database import (
 
 async def test_create_training_entry_fails_because_of_invalid_type(
     training_timestamp,
-    training_used_slots,
+    training_dogs,
 ):
     training_type = "some-type"
 
@@ -27,7 +27,7 @@ async def test_create_training_entry_fails_because_of_invalid_type(
         TrainingSpec(
             timestamp=training_timestamp,
             type=training_type,
-            used_slots=training_used_slots,
+            dogs=training_dogs,
             card_id="some_string",
         )
 
@@ -45,7 +45,7 @@ async def test_create_training_entry_fails_because_of_invalid_type(
     ],
 )
 async def test_create_training_entry_fails_because_of_invalid_date_timestamp(
-    training_type, training_used_slots, training_timestamp
+    training_type, training_dogs, training_timestamp
 ):
     with pytest.raises(
         TrainingSpecInvalid,
@@ -58,13 +58,13 @@ async def test_create_training_entry_fails_because_of_invalid_date_timestamp(
         TrainingSpec(
             timestamp=training_timestamp,
             type=training_type,
-            used_slots=training_used_slots,
+            dogs=training_dogs,
             card_id="some_string",
         )
 
 
 @pytest.mark.parametrize(
-    "used_slots",
+    "dogs",
     [
         -1,
         0,
@@ -75,27 +75,27 @@ async def test_create_training_entry_fails_because_of_invalid_date_timestamp(
         dict(),
     ],
 )
-async def test_create_training_entry_fails_because_of_invalid_used_slots(
-    training_type, training_timestamp, used_slots
+async def test_create_training_entry_fails_because_of_invalid_dogs(
+    training_type, training_timestamp, dogs
 ):
     with pytest.raises(
         TrainingSpecInvalid,
         match=re.escape(
-            f"The used_slots of a training can not be below 0 and"
-            f" has to be of the type int but was: {used_slots}"
-            f" and of type: {type(used_slots)}",
+            f"The dogs of a training have to be of type: List[str], but was: {type(dogs)}"
         ),
     ):
         TrainingSpec(
             timestamp=training_timestamp,
             type=training_type,
-            used_slots=used_slots,
+            dogs=dogs,
             card_id="some_string",
         )
 
 
 @pytest.mark.parametrize("card_id", [list(), dict(), set(), None, -1, 1e2, 0])
-def test_create_training_spec_fails_because_of_invalid_card_id(card_id, training_type):
+def test_create_training_spec_fails_because_of_invalid_card_id(
+    card_id, training_type, training_dogs
+):
     with pytest.raises(
         TrainingSpecInvalid,
         match=re.escape(
@@ -103,7 +103,9 @@ def test_create_training_spec_fails_because_of_invalid_card_id(card_id, training
             f" str but was: {card_id} and of type: {type(card_id)}",
         ),
     ):
-        TrainingSpec(timestamp=1, type=training_type, used_slots=1, card_id=card_id)
+        TrainingSpec(
+            timestamp=1, type=training_type, dogs=training_dogs, card_id=card_id
+        )
 
 
 @pytest.mark.parametrize(

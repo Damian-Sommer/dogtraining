@@ -22,7 +22,7 @@ async def test_create_training_entry_with_valid_data_succeeds(
     training_database,
     training_type,
     training_timestamp,
-    training_used_slots,
+    training_dogs,
 ):
     card_cost = 100
     card_slots = 1
@@ -38,22 +38,22 @@ async def test_create_training_entry_with_valid_data_succeeds(
         training_spec=TrainingSpec(
             timestamp=training_timestamp,
             type=training_type,
-            used_slots=training_used_slots,
+            dogs=training_dogs,
             card_id=card.id,
         )
     )
 
-    assert actual_training.timestamp == training_timestamp
-    assert actual_training.type == training_type
-    assert actual_training.used_slots == training_used_slots
-    assert actual_training.card_id == card.id
+    assert actual_training[0].timestamp == training_timestamp
+    assert actual_training[0].type == training_type
+    assert actual_training[0].dog == training_dogs[0]
+    assert actual_training[0].card_id == card.id
 
 
 async def test_get_training_entry_by_id(
     training_database,
     training_timestamp,
     training_type,
-    training_used_slots,
+    training_dogs,
 ):
     card = await training_database.create_card_entry(
         card_spec=CardSpec(
@@ -66,17 +66,17 @@ async def test_get_training_entry_by_id(
         training_spec=TrainingSpec(
             timestamp=training_timestamp,
             type=training_type,
-            used_slots=training_used_slots,
+            dogs=training_dogs,
             card_id=card.id,
         )
     )
 
     actual_training: Training = await training_database.get_training_entry_by_id(
-        training_id=training.id
+        training_id=training[0].id
     )
     assert actual_training.timestamp == training_timestamp
     assert actual_training.type == training_type
-    assert actual_training.used_slots == training_used_slots
+    assert actual_training.dog == training_dogs[0]
     assert actual_training.card_id == card.id
 
 
@@ -102,7 +102,7 @@ async def test_get_all_training_entries(training_database, training_type):
         TrainingSpec(
             timestamp=i + 1,
             type=training_type,
-            used_slots=i + 1,
+            dogs=[str(i + 1)],
             card_id=card.id,
         )
         for i in range(4)
@@ -134,7 +134,6 @@ async def test_create_card_entry(training_database):
 
     assert card.timestamp == timestamp
     assert card.slots == slots
-    print(type(card.cost))
     assert card.cost == card_cost
 
 
@@ -170,7 +169,7 @@ async def test_get_trainings_by_referenced_card_id(
     training_database,
     training_timestamp,
     training_type,
-    training_used_slots,
+    training_dogs,
 ):
     card = await training_database.create_card_entry(
         card_spec=CardSpec(
@@ -184,21 +183,21 @@ async def test_get_trainings_by_referenced_card_id(
         training_spec=TrainingSpec(
             timestamp=training_timestamp,
             type=training_type,
-            used_slots=training_used_slots,
+            dogs=training_dogs,
             card_id=card.id,
         )
     )
 
     actual_card = await training_database.get_card_entry_by_id(card_id=card.id)
     assert len(actual_card.trainings) == 1
-    assert actual_card.trainings[0].id == training.id
+    assert actual_card.trainings[0].id == training[0].id
 
 
 async def test_get_card_by_referenced_in_training(
     training_database,
     training_timestamp,
     training_type,
-    training_used_slots,
+    training_dogs,
 ):
     card = await training_database.create_card_entry(
         card_spec=CardSpec(
@@ -212,13 +211,13 @@ async def test_get_card_by_referenced_in_training(
         training_spec=TrainingSpec(
             timestamp=training_timestamp,
             type=training_type,
-            used_slots=training_used_slots,
+            dogs=training_dogs,
             card_id=card.id,
         )
     )
 
     actual_training = await training_database.get_training_entry_by_id(
-        training_id=training.id
+        training_id=training[0].id
     )
     assert actual_training.card.id == card.id
 
@@ -249,18 +248,18 @@ async def test_get_training_entry_as_dict(
     create_training_entry,
     training_timestamp,
     training_type,
-    training_used_slots,
+    training_dogs,
     create_card_entry,
 ):
     card = await create_card_entry()
     training = await create_training_entry(card_id=card.id)
     assert (
-        training.as_dict().items()
+        training[0].as_dict().items()
         == dict(
-            id=training.id,
+            id=training[0].id,
             timestamp=training_timestamp,
             type=training_type,
-            used_slots=training_used_slots,
+            dog=training_dogs[0],
             card_id=card.id,
         ).items()
     )

@@ -63,10 +63,12 @@ class TrainingHandler:
     async def create_training_entry(self, request: web.Request):
         try:
             training_spec = TrainingSpec.from_json(data=await request.json())
-            training = await self._training_database.create_training_entry(
+            trainings = await self._training_database.create_training_entry(
                 training_spec=training_spec
             )
-            return web.json_response(data=training.as_dict())
+            return web.json_response(
+                data=[training.as_dict() for training in trainings]
+            )
         except (InvalidPayload, CardNotFound) as e:
             return web.json_response(
                 status=400,

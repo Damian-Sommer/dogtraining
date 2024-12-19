@@ -1,34 +1,13 @@
 import pytest
-from sqlalchemy.ext.asyncio import create_async_engine
 
-from server.models import Base, Card, Training
+from server.models import Card, Training
 from server.training_database import (
     CardNotFound,
     CardSpec,
-    TrainingDatabase,
     TrainingNotFound,
     TrainingSpec,
     TrainingType,
 )
-
-
-@pytest.fixture
-def connection(tmp_path):
-    db = tmp_path / "test.db"
-    return f"sqlite+aiosqlite:///{db}"
-
-
-@pytest.fixture
-async def init_db(connection):
-    engine = create_async_engine(connection)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
-
-
-@pytest.fixture
-async def training_database(init_db, connection):
-    return TrainingDatabase(connection=connection)
 
 
 @pytest.mark.parametrize(
@@ -264,3 +243,39 @@ async def test_get_all_card_entries(training_database):
 async def test_get_all_cards_but_not_cards_exists(training_database):
     cards = await training_database.get_all_card_entries()
     assert not cards
+
+
+async def test_get_training_entry_as_dict(
+    create_training_entry,
+    training_timestamp,
+    training_type,
+    training_used_slots,
+    create_card_entry,
+):
+    card = await create_card_entry()
+    training = await create_training_entry(card_id=card.id)
+    assert (
+        training.as_dict().items()
+        == dict(
+            id=training.id,
+            timestamp=training_timestamp,
+            type=training_type,
+            used_slots=training_used_slots,
+            card_id=card.id,
+        ).items()
+    )
+
+
+async def test_get_card_entry_as_dict(
+    create_card_entry,
+):
+    card = await create_card_entry()
+    assert (
+        card.as_dict().items()
+        == dict(
+            id=card.id,
+            timestamp=card.timestamp,
+            cost=card.cost,
+            slots=card.slots,
+        ).items()
+    )

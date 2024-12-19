@@ -20,6 +20,15 @@ class Training(Base):
 
     card = relationship("Card", uselist=False, back_populates="trainings")
 
+    def as_dict(self):
+        return dict(
+            id=self.id,
+            timestamp=self.timestamp,
+            type=self.type,
+            used_slots=self.used_slots,
+            card_id=self.card_id,
+        )
+
 
 class Card(Base):
     __tablename__ = "card"
@@ -32,3 +41,11 @@ class Card(Base):
     slots: Mapped[int] = mapped_column(Integer, nullable=False)
 
     trainings = relationship("Training", back_populates="card")
+
+    def as_dict(self):
+        return dict(
+            id=self.id,
+            timestamp=self.timestamp,
+            cost=self.cost,
+            slots=self.slots,
+        )

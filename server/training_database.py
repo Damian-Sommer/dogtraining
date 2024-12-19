@@ -3,7 +3,7 @@ from enum import StrEnum
 from typing import List
 
 import attrs
-from sqlalchemy import select
+from sqlalchemy import exc, select
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import selectinload
@@ -52,6 +52,21 @@ class TrainingSpec:
                 f"The card_id of a training has to be of type str but was: {value} and of type: {type(value)}",
             )
 
+    @classmethod
+    def from_json(cls, *, data):
+        keys = ["timestamp", "type", "used_slots", "card_id"]
+        for k in keys:
+            if k not in data:
+                raise InvalidPayload(
+                    f"You have to provide a payload with the following keys: {keys}"
+                )
+        return cls(
+            timestamp=data["timestamp"],
+            type=data["type"],
+            used_slots=data["used_slots"],
+            card_id=data["card_id"],
+        )
+
 
 @attrs.define
 class CardSpec:
@@ -80,6 +95,19 @@ class CardSpec:
                 f"The slots of a card can not be below 0 and has to be of the type int but was: {value} and of type: {type(value)}",
             )
 
+    @classmethod
+    def from_json(cls, *, data):
+        for k in ["timestamp", "cost", "slots"]:
+            if k not in data:
+                raise InvalidPayload(
+                    f"You have to provide a payload with the following keys: {["timestamp", "cost", "slots"]}"
+                )
+        return cls(
+            timestamp=data["timestamp"],
+            cost=data["cost"],
+            slots=data["slots"],
+        )
+
 
 class TrainingDatabase:
     def __init__(self, connection):
@@ -89,6 +117,15 @@ class TrainingDatabase:
     async def create_training_entry(self, *, training_spec) -> Training:
         async with self.async_session() as session:
             async with session.begin():
+                try:
+                    card = await session.execute(
+                        select(Card).where(Card.id == training_spec.card_id)
+                    )
+                    card.scalars().one()
+                except exc.NoResultFound:
+                    raise CardNotFound(
+                        f"There is no card with the specified card_id: {training_spec.card_id}"
+                    )
                 training: Training = Training(
                     id=str(uuid.uuid4()),
                     timestamp=training_spec.timestamp,
@@ -179,4 +216,8 @@ class CardNotFound(DatabaseException):
 
 
 class CardSpecInvalid(Exception):
+    pass
+
+
+class InvalidPayload(Exception):
     pass

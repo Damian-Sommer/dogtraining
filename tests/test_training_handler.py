@@ -143,11 +143,12 @@ async def test_create_training_entry_with_valid_data_succeeds(
         type=training_type,
     ).items()
 
+
 async def test_create_training_entry_but_card_will_be_overflown_raises_exception(
-        client,
-        create_card_entry,
-        training_type,
-        training_timestamp,
+    client,
+    create_card_entry,
+    training_type,
+    training_timestamp,
 ):
     card = await create_card_entry()
     training_spec = TrainingSpec(
@@ -162,11 +163,12 @@ async def test_create_training_entry_but_card_will_be_overflown_raises_exception
         "error": f"The card: {card.id} has not enough slots for this training entry, please create a new card entry with and provide it as 'new_card' in the payload.",
     }
 
-async def test_create_training_entry_but_card_will_be_overflown_raises_exception(
-        client,
-        create_card_entry,
-        training_type,
-        training_timestamp,
+
+async def test_create_training_entry_but_card_will_be_overflown(
+    client,
+    create_card_entry,
+    training_type,
+    training_timestamp,
 ):
     dogs = ["some", "dog"]
     card: Card = await create_card_entry()
@@ -181,15 +183,21 @@ async def test_create_training_entry_but_card_will_be_overflown_raises_exception
     response = await client.post("/trainings", json=attrs.asdict(training_spec))
     assert response.status == 200
     response_json = await response.json()
-    assert response_json[0].items() >= dict(
-        timestamp=training_timestamp,
-        dog=dogs[0],
-        type=training_type,
-        card_id=card.id
-    ).items()
-    assert response_json[1].items() >= dict(
-        timestamp=training_timestamp,
-        dog=dogs[1],
-        type=training_type,
-        card_id=card_new.id
-    ).items()
+    assert (
+        response_json[0].items()
+        >= dict(
+            timestamp=training_timestamp,
+            dog=dogs[0],
+            type=training_type,
+            card_id=card.id,
+        ).items()
+    )
+    assert (
+        response_json[1].items()
+        >= dict(
+            timestamp=training_timestamp,
+            dog=dogs[1],
+            type=training_type,
+            card_id=card_new.id,
+        ).items()
+    )

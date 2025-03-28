@@ -280,9 +280,15 @@ async def test_get_card_entry_as_dict(
         ).items()
     )
 
-async def test_create_training_entry_but_card_is_full_raises_exception(training_database, create_card_entry,training_timestamp,training_type):
+
+async def test_create_training_entry_but_card_is_full_raises_exception(
+    training_database, create_card_entry, training_timestamp, training_type
+):
     card = await create_card_entry()
-    with pytest.raises(CardFull, match=f"The card: {card.id} has not enough slots for this training entry, please create a new card entry with and provide it as 'new_card' in the payload."):
+    with pytest.raises(
+        CardFull,
+        match=f"The card: {card.id} has not enough slots for this training entry, please create a new card entry with and provide it as 'new_card' in the payload.",
+    ):
         await training_database.create_training_entry(
             training_spec=TrainingSpec(
                 timestamp=training_timestamp,
@@ -292,7 +298,10 @@ async def test_create_training_entry_but_card_is_full_raises_exception(training_
             )
         )
 
-async def test_create_training_entry_but_assign_overflowing_trainings_to_new_card(training_database, create_card_entry, training_timestamp, training_type):
+
+async def test_create_training_entry_but_assign_overflowing_trainings_to_new_card(
+    training_database, create_card_entry, training_timestamp, training_type
+):
     card = await create_card_entry()
     card_new = await create_card_entry()
     trainings = await training_database.create_training_entry(

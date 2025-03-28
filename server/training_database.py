@@ -3,7 +3,7 @@ from enum import StrEnum
 from typing import List
 
 import attrs
-from sqlalchemy import exc, select
+from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import selectinload
@@ -77,7 +77,7 @@ class TrainingSpec:
             type=data["type"],
             dogs=data["dogs"],
             card_id=data["card_id"],
-            new_card_id=data.get("new_card_id", None)
+            new_card_id=data.get("new_card_id", None),
         )
 
 
@@ -127,12 +127,19 @@ class TrainingDatabase:
         engine = create_async_engine(connection)
         self.async_session = async_sessionmaker(engine, expire_on_commit=False)
 
-    async def create_training_entry(self, *, training_spec: TrainingSpec) -> List[Training]:
+    async def create_training_entry(
+        self, *, training_spec: TrainingSpec
+    ) -> List[Training]:
         card: Card = await self.get_card_entry_by_id(card_id=training_spec.card_id)
         async with self.async_session() as session:
             async with session.begin():
-                if len(card.trainings) + len(training_spec.dogs) > card.slots and training_spec.new_card_id is None:
-                    raise CardFull(f"The card: {card.id} has not enough slots for this training entry, please create a new card entry with and provide it as 'new_card' in the payload.")
+                if (
+                    len(card.trainings) + len(training_spec.dogs) > card.slots
+                    and training_spec.new_card_id is None
+                ):
+                    raise CardFull(
+                        f"The card: {card.id} has not enough slots for this training entry, please create a new card entry with and provide it as 'new_card' in the payload."
+                    )
                 available_slots = card.slots - len(card.trainings)
 
                 trainings_old_card: List[Training] = [
@@ -247,6 +254,7 @@ class CardSpecInvalid(Exception):
 
 class InvalidPayload(Exception):
     pass
+
 
 class CardFull(Exception):
     pass

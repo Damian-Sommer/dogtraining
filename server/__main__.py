@@ -1,19 +1,17 @@
 import argparse
-from server.training_database import TrainingDatabase
-from server.training_handler import TrainingHandler
+
 from aiohttp import web
 
-parser = argparse.ArgumentParser(prog='Dogtraining Server')
+from server.training_database import TrainingDatabase
+from server.training_handler import TrainingHandler
+
+parser = argparse.ArgumentParser(prog="Dogtraining Server")
 parser.add_argument(
     "--host",
     default="localhost",
     type=str,
 )
-parser.add_argument(
-    "--port",
-    default=5000,
-    type=int
-)
+parser.add_argument("--port", default=5000, type=int)
 parser.add_argument(
     "--connection",
     default=None,
@@ -21,7 +19,6 @@ parser.add_argument(
 )
 
 if __name__ == "__main__":
-
     args = parser.parse_args()
     app = web.Application()
 
@@ -39,7 +36,7 @@ if __name__ == "__main__":
             ]
         )
         yield
-    
+
     app.cleanup_ctx.append(init_db)
     web.run_app(
         app=app,

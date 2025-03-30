@@ -9,7 +9,7 @@ export const routes = [
     path: "/",
     name: "Home",
     component: Home,
-    props: {
+    meta: {
       nav: false,
     }
   },
@@ -17,7 +17,7 @@ export const routes = [
     path: "/trainings",
     name: "Trainings",
     component: Trainings,
-    props: {
+    meta: {
       nav: true,
     }
   },
@@ -25,7 +25,7 @@ export const routes = [
     path: "/cards",
     name: "Karten",
     component: Cards,
-    props: {
+    meta: {
       nav: true,
     }
   },
@@ -33,7 +33,7 @@ export const routes = [
     path: "/newCard",
     name: "Neue Karte",
     component: NewCard,
-    props: {
+    meta: {
       nav: false,
     }
   },

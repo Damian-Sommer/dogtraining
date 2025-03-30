@@ -11,7 +11,7 @@ import { routes } from "./index.js";
       <nav>
         <ul>
           <li v-for="link in routes">
-            <RouterLink :to="link.path" v-if="link.props.nav === true" :key="link.path">{{ link.name }}</RouterLink>
+            <RouterLink :to="link.path" v-if="link.meta.nav === true" :key="link.path">{{ link.name }}</RouterLink>
           </li>
         </ul>
       </nav>
@@ -22,6 +22,21 @@ import { routes } from "./index.js";
   </main>
 </template>
 
+<script>
+import { defineComponent } from "vue";
+
+export default defineComponent({
+  name: "App",
+  watch: {
+    $route: {
+      immediate: true,
+      handler(to, from){
+        document.title = `Dogtraining - ${to.name}`
+      }
+    }
+  }
+});
+</script>
 <style scoped>
 main {
   display: flex;

@@ -1,3 +1,4 @@
+import Cards from "./components/Cards.vue";
 import Home from "./components/Home.vue";
 import Trainings from "./components/Trainings.vue";
 import { createWebHistory, createRouter } from "vue-router";
@@ -12,6 +13,11 @@ export const routes = [
     path: "/trainings",
     name: "Trainings",
     component: Trainings,
+  },
+  {
+    path: "/cards",
+    name: "Karten",
+    component: Cards,
   },
 ];
 

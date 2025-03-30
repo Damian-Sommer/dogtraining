@@ -19,7 +19,7 @@
       </tr>
     </tbody>
   </table>
-  <button class="trainingButton">Training hinzufügen</button>
+  <button class="trainingButton">Neues Training</button>
 </template>
 
 <script>

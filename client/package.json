@@ -6,9 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "prettify": "prettier --write ."
   },
   "dependencies": {
+    "prettier": "^3.5.3",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0"
   },

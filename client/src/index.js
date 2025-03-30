@@ -1,6 +1,6 @@
 import Home from "./components/Home.vue";
 import Trainings from "./components/Trainings.vue";
-import { createMemoryHistory, createRouter } from "vue-router";
+import { createWebHistory, createRouter } from "vue-router";
 
 export const routes = [
   {
@@ -16,7 +16,7 @@ export const routes = [
 ];
 
 const router = createRouter({
-  history: createMemoryHistory(),
+  history: createWebHistory(),
   routes,
 });
 

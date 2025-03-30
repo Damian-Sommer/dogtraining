@@ -19,7 +19,7 @@
         </tr>
       </tbody>
     </table>
-    <button class="cardButton">Neue Karte</button>
+    <button @click="$router.push('/newCard')">Neue Karte</button>
   </template>
   
   <script>
@@ -43,7 +43,7 @@
   td {
     padding: 0.25em 0.75em;
   }
-  .cardButton {
+  button {
     margin: 1em 1em 1em 0;
   }
   </style>

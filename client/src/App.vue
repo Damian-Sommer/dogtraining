@@ -11,7 +11,7 @@ import { routes } from "./index.js";
       <nav>
         <ul>
           <li v-for="link in routes">
-            <RouterLink :to="link.path" v-if="link.name !== 'Home'" :key="link.path">{{ link.name }}</RouterLink>
+            <RouterLink :to="link.path" v-if="link.props.nav === true" :key="link.path">{{ link.name }}</RouterLink>
           </li>
         </ul>
       </nav>

@@ -11,13 +11,18 @@ import { routes } from "./index.js";
       <nav>
         <ul>
           <li v-for="link in routes">
-            <RouterLink :to="link.path" v-if="link.meta.nav === true" :key="link.path">{{ link.name }}</RouterLink>
+            <RouterLink
+              :to="link.path"
+              v-if="link.meta.nav === true"
+              :key="link.path"
+              >{{ link.name }}</RouterLink
+            >
           </li>
         </ul>
       </nav>
     </aside>
     <div class="view">
-      <RouterView/>
+      <RouterView />
     </div>
   </main>
 </template>
@@ -30,11 +35,11 @@ export default defineComponent({
   watch: {
     $route: {
       immediate: true,
-      handler(to, from){
-        document.title = `Dogtraining - ${to.name}`
-      }
-    }
-  }
+      handler(to, from) {
+        document.title = `Dogtraining - ${to.name}`;
+      },
+    },
+  },
 });
 </script>
 <style scoped>
@@ -64,7 +69,7 @@ aside {
   height: 100%;
   background-color: aqua;
 }
-nav { 
+nav {
   height: 100%;
   width: 100%;
 }
@@ -80,7 +85,7 @@ nav ul a:hover {
 }
 nav ul a {
   display: block;
-  padding: .5em;
+  padding: 0.5em;
 }
 .view {
   margin: 1em;

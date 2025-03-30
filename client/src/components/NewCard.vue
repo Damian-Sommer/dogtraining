@@ -5,7 +5,7 @@
     <label for="cost">Kosten:</label><br />
     <input v-model="cost" id="cost" name="cost" /><br /><br />
     <label for="buyDate">Kaufdatum</label><br />
-    <input v-model="buyDate" type="date" name="buyDate" id="buyDate">
+    <input v-model="buyDate" type="date" name="buyDate" id="buyDate" />
   </form>
   <button @click="$router.push('/cards')">Zurück</button>
   <button @click="sendData">Erstellen</button>
@@ -19,18 +19,18 @@ export default defineComponent({
     return {
       slots: 12,
       cost: 200,
-      buyDate: new Date().toISOString().split('T')[0],
+      buyDate: new Date().toISOString().split("T")[0],
     };
   },
   methods: {
     sendData() {
-        if (this.buyDate == null || this.buyDate === NaN || this.buyDate === ""){
-            this.buyDate = new Date().toISOString().split('T')[0];
-        }
-        let timestamp = new Date(this.buyDate).getTime();
-        console.log({"timestamp": timestamp, "cost": this.cost, "slots": this.slots});
-    }
-  }
+      if (this.buyDate == null || this.buyDate === NaN || this.buyDate === "") {
+        this.buyDate = new Date().toISOString().split("T")[0];
+      }
+      let timestamp = new Date(this.buyDate).getTime();
+      console.log({ timestamp: timestamp, cost: this.cost, slots: this.slots });
+    },
+  },
 });
 </script>
 

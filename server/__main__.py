@@ -3,7 +3,7 @@ import argparse
 from aiohttp import web
 
 from server.training_database import TrainingDatabase
-from server.training_handler import TrainingHandler
+from server.training_handler import TrainingHandler, user_authentication
 
 parser = argparse.ArgumentParser(prog="Dogtraining Server")
 parser.add_argument(
@@ -20,7 +20,7 @@ parser.add_argument(
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    app = web.Application()
+    app = web.Application(middlewares=[user_authentication])
 
     async def init_db(app):
         training_database = TrainingDatabase(connection=args.connection)

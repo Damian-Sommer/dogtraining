@@ -11,6 +11,20 @@ from server.training_database import (
 )
 
 
+@web.middleware
+async def user_authentication(request, handler):
+    user_id = request.headers.get("user_id")
+    if not user_id:
+        return web.json_response(
+            status=401,
+            data={
+                "error": "Unauthorized access, provide the correct authorization header."
+            },
+        )
+    resp = await handler(request)
+    return resp
+
+
 class TrainingHandler:
     def __init__(self, *, training_database):
         self._training_database: TrainingDatabase = training_database
@@ -19,7 +33,9 @@ class TrainingHandler:
         return web.json_response(
             data=[
                 training.as_dict()
-                for training in await self._training_database.get_all_training_entries()
+                for training in await self._training_database.get_all_training_entries(
+                    user_id=request.headers.get("user_id"),
+                )
             ]
         )
 
@@ -27,7 +43,7 @@ class TrainingHandler:
         training_id = request.match_info["id"]
         try:
             training = await self._training_database.get_training_entry_by_id(
-                training_id=training_id
+                training_id=training_id, user_id=request.headers.get("user_id")
             )
             return web.json_response(data=training.as_dict())
         except DatabaseException as e:
@@ -39,20 +55,27 @@ class TrainingHandler:
             )
 
     async def get_all_cards(self, request: web.Request):
-        cards = await self._training_database.get_all_card_entries()
+        cards = await self._training_database.get_all_card_entries(
+            user_id=request.headers.get("user_id"),
+        )
         return web.json_response(data=[card.as_dict() for card in cards])
 
     async def get_card_by_id(self, request: web.Request):
         card_id = request.match_info["id"]
         try:
-            card = await self._training_database.get_card_entry_by_id(card_id=card_id)
+            card = await self._training_database.get_card_entry_by_id(
+                card_id=card_id,
+                user_id=request.headers.get("user_id"),
+            )
             return web.json_response(data=card.as_dict())
         except DatabaseException as e:
             return web.json_response(status=400, data={"error": str(e)})
 
     async def create_card_entry(self, request: web.Request):
         try:
-            card_spec = CardSpec.from_json(data=await request.json())
+            card_spec = CardSpec.from_json(
+                data=await request.json(), user_id=request.headers.get("user_id")
+            )
             card = await self._training_database.create_card_entry(card_spec=card_spec)
             return web.json_response(data=card.as_dict())
         except InvalidPayload as e:
@@ -63,7 +86,9 @@ class TrainingHandler:
 
     async def create_training_entry(self, request: web.Request):
         try:
-            training_spec = TrainingSpec.from_json(data=await request.json())
+            training_spec = TrainingSpec.from_json(
+                data=await request.json(), user_id=request.headers.get("user_id")
+            )
             trainings = await self._training_database.create_training_entry(
                 training_spec=training_spec
             )

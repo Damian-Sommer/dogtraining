@@ -1,6 +1,7 @@
 import Cards from "./components/Cards.vue";
 import Home from "./components/Home.vue";
 import NewCard from "./components/NewCard.vue";
+import NewTraining from "./components/NewTraining.vue";
 import Trainings from "./components/Trainings.vue";
 import { createWebHistory, createRouter } from "vue-router";
 
@@ -33,6 +34,14 @@ export const routes = [
     path: "/newCard",
     name: "Neue Karte",
     component: NewCard,
+    meta: {
+      nav: false,
+    },
+  },
+  {
+    path: "/newTraining",
+    name: "Neues Training",
+    component: NewTraining,
     meta: {
       nav: false,
     },

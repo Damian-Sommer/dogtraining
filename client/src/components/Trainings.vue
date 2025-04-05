@@ -19,7 +19,7 @@
       </tr>
     </tbody>
   </table>
-  <button class="trainingButton">Neues Training</button>
+  <button @click="$router.push('/newTraining')">Neues Training eintragen</button>
 </template>
 
 <script>
@@ -43,7 +43,7 @@ thead td {
 td {
   padding: 0.25em 0.75em;
 }
-.trainingButton {
+button {
   margin: 1em 1em 1em 0;
 }
 </style>

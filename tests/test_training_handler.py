@@ -77,11 +77,12 @@ async def test_get_card_by_id(client, create_card_entry):
     assert await response.json() == card.as_dict()
 
 
-async def test_create_card_entry_with_valid_data_succeeds(client):
+async def test_create_card_entry_with_valid_data_succeeds(client, user_id):
     card_spec = CardSpec(
         timestamp=2,
         slots=2,
         cost=3,
+        user_id=user_id,
     )
     response = await client.post("/cards", json=attrs.asdict(card_spec))
     assert response.status == 200
@@ -92,7 +93,7 @@ async def test_create_card_entry_with_invalid_payload_fails(client):
     response = await client.post("/cards", json=dict(some="value"))
     assert response.status == 400
     assert await response.json() == {
-        "error": f"You have to provide a payload with the following keys: {["timestamp", "cost", "slots"]}"
+        "error": f"You have to provide a payload with the following keys: {["timestamp", "cost", "slots", "user_id"]}"
     }
 
 
@@ -100,12 +101,12 @@ async def test_create_training_entry_with_invalid_payload_fails(client):
     response = await client.post("/trainings", json=dict(some="value"))
     assert response.status == 400
     assert await response.json() == {
-        "error": f"You have to provide a payload with the following keys: {["timestamp", "type", "dogs", "card_id"]}"
+        "error": f"You have to provide a payload with the following keys: {["timestamp", "type", "dogs", "card_id", "user_id"]}"
     }
 
 
 async def test_create_training_entry_but_card_does_not_exist(
-    client, training_timestamp, training_type, training_dogs
+    client, training_timestamp, training_type, training_dogs,user_id,
 ):
     card_id = "some-id"
     training_spec = TrainingSpec(
@@ -113,6 +114,7 @@ async def test_create_training_entry_but_card_does_not_exist(
         type=training_type,
         dogs=training_dogs,
         card_id=card_id,
+        user_id=user_id,
     )
     response = await client.post("/trainings", json=attrs.asdict(training_spec))
     assert response.status == 400
@@ -127,6 +129,7 @@ async def test_create_training_entry_with_valid_data_succeeds(
     training_timestamp,
     training_type,
     training_dogs,
+    user_id,
 ):
     card = await create_card_entry()
     training_spec = TrainingSpec(
@@ -134,6 +137,7 @@ async def test_create_training_entry_with_valid_data_succeeds(
         type=training_type,
         dogs=training_dogs,
         card_id=card.id,
+        user_id=user_id,
     )
     response = await client.post("/trainings", json=attrs.asdict(training_spec))
     assert response.status == 200
@@ -149,6 +153,7 @@ async def test_create_training_entry_but_card_will_be_overflown_raises_exception
     create_card_entry,
     training_type,
     training_timestamp,
+    user_id,
 ):
     card = await create_card_entry()
     training_spec = TrainingSpec(
@@ -156,6 +161,7 @@ async def test_create_training_entry_but_card_will_be_overflown_raises_exception
         type=training_type,
         dogs=["some", "dog"],
         card_id=card.id,
+        user_id=user_id,
     )
     response = await client.post("/trainings", json=attrs.asdict(training_spec))
     assert response.status == 400
@@ -169,6 +175,7 @@ async def test_create_training_entry_but_card_will_be_overflown(
     create_card_entry,
     training_type,
     training_timestamp,
+    user_id,
 ):
     dogs = ["some", "dog"]
     card: Card = await create_card_entry()
@@ -179,6 +186,7 @@ async def test_create_training_entry_but_card_will_be_overflown(
         dogs=dogs,
         card_id=card.id,
         new_card_id=card_new.id,
+        user_id=user_id,
     )
     response = await client.post("/trainings", json=attrs.asdict(training_spec))
     assert response.status == 200
@@ -190,6 +198,7 @@ async def test_create_training_entry_but_card_will_be_overflown(
             dog=dogs[0],
             type=training_type,
             card_id=card.id,
+            user_id=user_id,
         ).items()
     )
     assert (
@@ -199,5 +208,6 @@ async def test_create_training_entry_but_card_will_be_overflown(
             dog=dogs[1],
             type=training_type,
             card_id=card_new.id,
+            user_id=user_id,
         ).items()
     )

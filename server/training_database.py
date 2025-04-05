@@ -23,6 +23,7 @@ class TrainingSpec:
     type: TrainingType = attrs.field()
     dogs: List[str] = attrs.field()
     card_id: str = attrs.field()
+    user_id: str = attrs.field()
     new_card_id: str = attrs.field(default=None)
 
     @type.validator
@@ -64,9 +65,16 @@ class TrainingSpec:
                 f"The new_card_id of a training has to be of type str or None but was: {value} and of type: {type(value)}",
             )
 
+    @user_id.validator
+    def check_user_id(self, attribute, value):
+        if not isinstance(value, str):
+            raise TrainingSpecInvalid(
+                f"The user_id of a training has to be of type str but was: {value} and of type: {type(value)}",
+            )
+
     @classmethod
     def from_json(cls, *, data):
-        keys = ["timestamp", "type", "dogs", "card_id"]
+        keys = ["timestamp", "type", "dogs", "card_id", "user_id"]
         for k in keys:
             if k not in data:
                 raise InvalidPayload(
@@ -78,6 +86,7 @@ class TrainingSpec:
             dogs=data["dogs"],
             card_id=data["card_id"],
             new_card_id=data.get("new_card_id", None),
+            user_id=data.get("user_id"),
         )
 
 
@@ -86,6 +95,7 @@ class CardSpec:
     timestamp: int = attrs.field()
     slots: int = attrs.field()
     cost: int = attrs.field()
+    user_id: str = attrs.field()
 
     @timestamp.validator
     def check_timestamp(self, attribute, value):
@@ -108,17 +118,26 @@ class CardSpec:
                 f"The slots of a card can not be below 0 and has to be of the type int but was: {value} and of type: {type(value)}",
             )
 
+    @user_id.validator
+    def check_user_id(self, attribute, value):
+        if not isinstance(value, str):
+            raise CardSpecInvalid(
+                f"The user_id of a card has to be of type str but was: {value} and of type: {type(value)}",
+            )
+
     @classmethod
     def from_json(cls, *, data):
-        for k in ["timestamp", "cost", "slots"]:
+        keys = ["timestamp", "cost", "slots", "user_id"]
+        for k in keys:
             if k not in data:
                 raise InvalidPayload(
-                    f"You have to provide a payload with the following keys: {["timestamp", "cost", "slots"]}"
+                    f"You have to provide a payload with the following keys: {keys}"
                 )
         return cls(
             timestamp=data["timestamp"],
             cost=data["cost"],
             slots=data["slots"],
+            user_id=data["user_id"],
         )
 
 
@@ -149,6 +168,7 @@ class TrainingDatabase:
                         type=str(training_spec.type),
                         dog=dog,
                         card_id=training_spec.card_id,
+                        user_id=training_spec.user_id,
                     )
                     for dog in training_spec.dogs[:available_slots]
                 ]
@@ -160,6 +180,7 @@ class TrainingDatabase:
                         type=str(training_spec.type),
                         dog=dog,
                         card_id=training_spec.new_card_id,
+                        user_id=training_spec.user_id,
                     )
                     for dog in training_spec.dogs[available_slots:]
                 ]
@@ -202,6 +223,7 @@ class TrainingDatabase:
                     timestamp=card_spec.timestamp,
                     cost=card_spec.cost,
                     slots=card_spec.slots,
+                    user_id=card_spec.user_id,
                 )
                 session.add(card)
                 await session.flush()

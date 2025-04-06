@@ -1,6 +1,6 @@
 from aiohttp import web
 
-from server.training_database import (
+from dogtraining.server.training_database import (
     CardFull,
     CardNotFound,
     CardSpec,

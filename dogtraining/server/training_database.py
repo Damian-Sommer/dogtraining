@@ -1,3 +1,4 @@
+import logging
 import uuid
 from enum import StrEnum
 from typing import List
@@ -8,7 +9,7 @@ from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import selectinload
 
-from server.models import Card, Training
+from dogtraining.server.models import Card, Training
 
 
 class TrainingType(StrEnum):

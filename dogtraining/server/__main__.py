@@ -4,7 +4,8 @@ import logging
 from aiohttp import web
 
 from dogtraining.server.training_database import TrainingDatabase
-from dogtraining.server.training_handler import TrainingHandler
+from dogtraining.server.training_handler import TrainingHandler, user_authentication
+
 
 parser = argparse.ArgumentParser(prog="Dogtraining Server")
 parser.add_argument(

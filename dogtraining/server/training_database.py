@@ -1,4 +1,3 @@
-import logging
 import uuid
 from enum import StrEnum
 from typing import List
@@ -24,6 +23,7 @@ class TrainingSpec:
     type: TrainingType = attrs.field()
     dogs: List[str] = attrs.field()
     card_id: str = attrs.field()
+    user_id: str = attrs.field()
     new_card_id: str = attrs.field(default=None)
 
     @type.validator
@@ -65,8 +65,15 @@ class TrainingSpec:
                 f"The new_card_id of a training has to be of type str or None but was: {value} and of type: {type(value)}",
             )
 
+    @user_id.validator
+    def check_user_id(self, attribute, value):
+        if not isinstance(value, str):
+            raise TrainingSpecInvalid(
+                f"The user_id of a training has to be of type str but was: {value} and of type: {type(value)}",
+            )
+
     @classmethod
-    def from_json(cls, *, data):
+    def from_json(cls, *, data, user_id):
         keys = ["timestamp", "type", "dogs", "card_id"]
         for k in keys:
             if k not in data:
@@ -79,6 +86,7 @@ class TrainingSpec:
             dogs=data["dogs"],
             card_id=data["card_id"],
             new_card_id=data.get("new_card_id", None),
+            user_id=user_id,
         )
 
 
@@ -87,6 +95,7 @@ class CardSpec:
     timestamp: int = attrs.field()
     slots: int = attrs.field()
     cost: int = attrs.field()
+    user_id: str = attrs.field()
 
     @timestamp.validator
     def check_timestamp(self, attribute, value):
@@ -109,17 +118,27 @@ class CardSpec:
                 f"The slots of a card can not be below 0 and has to be of the type int but was: {value} and of type: {type(value)}",
             )
 
+    @user_id.validator
+    def check_user_id(self, attribute, value):
+        if not isinstance(value, str):
+            raise CardSpecInvalid(
+                f"The user_id of a card has to be of type str but was: {value} and of type: {type(value)}",
+            )
+
     @classmethod
-    def from_json(cls, *, data):
-        for k in ["timestamp", "cost", "slots"]:
+    def from_json(cls, *, data, user_id):
+        keys = ["timestamp", "cost", "slots"]
+        for k in keys:
             if k not in data:
                 raise InvalidPayload(
-                    f"You have to provide a payload with the following keys: {["timestamp", "cost", "slots"]}"
+                    f"You have to provide a payload with the following keys: {keys}"
+
                 )
         return cls(
             timestamp=data["timestamp"],
             cost=data["cost"],
             slots=data["slots"],
+            user_id=user_id,
         )
 
 
@@ -131,7 +150,9 @@ class TrainingDatabase:
     async def create_training_entry(
         self, *, training_spec: TrainingSpec
     ) -> List[Training]:
-        card: Card = await self.get_card_entry_by_id(card_id=training_spec.card_id)
+        card: Card = await self.get_card_entry_by_id(
+            card_id=training_spec.card_id, user_id=training_spec.user_id
+        )
         async with self.async_session() as session:
             async with session.begin():
                 if (
@@ -150,6 +171,7 @@ class TrainingDatabase:
                         type=str(training_spec.type),
                         dog=dog,
                         card_id=training_spec.card_id,
+                        user_id=training_spec.user_id,
                     )
                     for dog in training_spec.dogs[:available_slots]
                 ]
@@ -161,6 +183,7 @@ class TrainingDatabase:
                         type=str(training_spec.type),
                         dog=dog,
                         card_id=training_spec.new_card_id,
+                        user_id=training_spec.user_id,
                     )
                     for dog in training_spec.dogs[available_slots:]
                 ]
@@ -172,12 +195,13 @@ class TrainingDatabase:
                 await session.commit()
                 return trainings
 
-    async def get_training_entry_by_id(self, *, training_id) -> Training:
+    async def get_training_entry_by_id(self, *, training_id, user_id) -> Training:
         async with self.async_session() as session:
             async with session.begin():
                 try:
                     result = await session.execute(
                         select(Training)
+                        .where(Training.user_id == user_id)
                         .where(Training.id == training_id)
                         .options(selectinload(Training.card))
                     )
@@ -187,11 +211,13 @@ class TrainingDatabase:
                         f"The requested training entry with id: {training_id} does not exist"
                     )
 
-    async def get_all_training_entries(self) -> List[Training]:
+    async def get_all_training_entries(self, *, user_id) -> List[Training]:
         async with self.async_session() as session:
             async with session.begin():
                 result = await session.execute(
-                    select(Training).options(selectinload(Training.card))
+                    select(Training)
+                    .where(Training.user_id == user_id)
+                    .options(selectinload(Training.card))
                 )
                 return result.scalars().all()
 
@@ -203,18 +229,20 @@ class TrainingDatabase:
                     timestamp=card_spec.timestamp,
                     cost=card_spec.cost,
                     slots=card_spec.slots,
+                    user_id=card_spec.user_id,
                 )
                 session.add(card)
                 await session.flush()
                 await session.commit()
                 return card
 
-    async def get_card_entry_by_id(self, *, card_id) -> Card:
+    async def get_card_entry_by_id(self, *, card_id, user_id) -> Card:
         async with self.async_session() as session:
             async with session.begin():
                 try:
                     result = await session.execute(
                         select(Card)
+                        .where(Card.user_id == user_id)
                         .where(Card.id == card_id)
                         .options(selectinload(Card.trainings))
                     )
@@ -224,11 +252,13 @@ class TrainingDatabase:
                         f"The requested card entry with id: {card_id} does not exist"
                     )
 
-    async def get_all_card_entries(self) -> List[Card]:
+    async def get_all_card_entries(self, *, user_id) -> List[Card]:
         async with self.async_session() as session:
             async with session.begin():
                 result = await session.execute(
-                    select(Card).options(selectinload(Card.trainings))
+                    select(Card)
+                    .where(Card.user_id == user_id)
+                    .options(selectinload(Card.trainings))
                 )
                 return result.scalars().all()
 

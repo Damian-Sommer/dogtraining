@@ -1,7 +1,7 @@
 import pytest
 
-from server.models import Card, Training
-from server.training_database import (
+from dogtraining.server.models import Card, Training
+from dogtraining.server.training_database import (
     CardFull,
     CardNotFound,
     CardSpec,

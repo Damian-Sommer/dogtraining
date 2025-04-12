@@ -2,7 +2,7 @@ import re
 
 import pytest
 
-from server.training_database import (
+from dogtraining.server.training_database import (
     CardSpec,
     CardSpecInvalid,
     TrainingSpec,

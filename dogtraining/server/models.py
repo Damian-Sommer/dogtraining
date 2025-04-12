@@ -17,6 +17,7 @@ class Training(Base):
     type: Mapped[str] = mapped_column(String, nullable=False)
     dog: Mapped[str] = mapped_column(String, nullable=False)
     user_id: Mapped[str] = mapped_column(String, nullable=False)
+
     card_id = mapped_column(String, ForeignKey("card.id"), nullable=False)
 
     card = relationship("Card", uselist=False, back_populates="trainings")

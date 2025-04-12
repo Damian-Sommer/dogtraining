@@ -132,6 +132,7 @@ class CardSpec:
             if k not in data:
                 raise InvalidPayload(
                     f"You have to provide a payload with the following keys: {keys}"
+
                 )
         return cls(
             timestamp=data["timestamp"],

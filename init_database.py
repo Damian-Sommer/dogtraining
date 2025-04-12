@@ -4,7 +4,7 @@ import asyncio
 from sqlalchemy import sql
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from server.models import Base
+from dogtraining.server.models import Base
 
 parser = argparse.ArgumentParser(prog="Dogtraining Server")
 parser.add_argument(

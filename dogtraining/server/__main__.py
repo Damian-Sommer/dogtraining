@@ -1,9 +1,11 @@
 import argparse
+import logging
 
 from aiohttp import web
 
 from dogtraining.server.training_database import TrainingDatabase
 from dogtraining.server.training_handler import TrainingHandler, user_authentication
+
 
 parser = argparse.ArgumentParser(prog="Dogtraining Server")
 parser.add_argument(
@@ -18,12 +20,18 @@ parser.add_argument(
     type=str,
 )
 
+_logger = logging.getLogger(__name__)
+
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
     args = parser.parse_args()
-    app = web.Application(middlewares=[user_authentication])
+    app = web.Application()
 
     async def init_db(app):
+        _logger.info("Start Initializing Database")
         training_database = TrainingDatabase(connection=args.connection)
+        _logger.info("Finished Initializing Database")
+        _logger.info("Start Initializing Routes")
         training_handler = TrainingHandler(training_database=training_database)
         app.add_routes(
             [
@@ -35,6 +43,7 @@ if __name__ == "__main__":
                 web.post("/trainings", training_handler.create_training_entry),
             ]
         )
+        _logger.info("Finished Initializing Routes")
         yield
 
     app.cleanup_ctx.append(init_db)

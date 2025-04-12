@@ -1,8 +1,8 @@
 import pytest
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from server.models import Base
-from server.training_database import (
+from dogtraining.server.models import Base
+from dogtraining.server.training_database import (
     CardSpec,
     TrainingDatabase,
     TrainingSpec,

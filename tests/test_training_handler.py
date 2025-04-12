@@ -2,9 +2,9 @@ import attrs
 import pytest
 from aiohttp import web
 
-from server.models import Card
-from server.training_database import CardSpec, TrainingSpec
-from server.training_handler import TrainingHandler
+from dogtraining.server.models import Card
+from dogtraining.server.training_database import CardSpec, TrainingSpec
+from dogtraining.server.training_handler import TrainingHandler
 
 
 @pytest.fixture

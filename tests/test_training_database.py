@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from dogtraining.server.models import Card, Training
@@ -5,6 +7,9 @@ from dogtraining.server.training_database import (
     CardFull,
     CardNotFound,
     CardSpec,
+    DogNotFound,
+    DogSpec,
+    DogSpecInvalid,
     TrainingNotFound,
     TrainingSpec,
     TrainingType,
@@ -22,19 +27,19 @@ from dogtraining.server.training_database import (
 async def test_create_training_entry_with_valid_data_succeeds(
     training_type,
     training_timestamp,
-    training_dogs,
     user_id,
     create_card_entry,
     create_training_entry,
+    create_dog_entry,
 ):
+    dog = await create_dog_entry()
+    dog2 = await create_dog_entry()
     card = await create_card_entry()
-    actual_training = await create_training_entry(
-        card_id=card.id,
-    )
+    actual_training = await create_training_entry(card_id=card.id, dogs=[dog.id])
 
     assert actual_training[0].timestamp == training_timestamp
     assert actual_training[0].type == training_type
-    assert actual_training[0].dog == training_dogs[0]
+    assert actual_training[0].dog_id == dog.id
     assert actual_training[0].card_id == card.id
     assert actual_training[0].user_id == user_id
 
@@ -46,17 +51,19 @@ async def test_get_training_entry_by_id(
     training_dogs,
     create_card_entry,
     create_training_entry,
+    create_dog_entry,
     user_id,
 ):
     card = await create_card_entry()
-    training = await create_training_entry(card_id=card.id)
+    dog = await create_dog_entry()
+    training = await create_training_entry(card_id=card.id, dogs=[dog.id])
 
     actual_training: Training = await training_database.get_training_entry_by_id(
         training_id=training[0].id, user_id=user_id
     )
     assert actual_training.timestamp == training_timestamp
     assert actual_training.type == training_type
-    assert actual_training.dog == training_dogs[0]
+    assert actual_training.dog_id == dog.id
     assert actual_training.card_id == card.id
     assert actual_training.user_id == user_id
 
@@ -65,10 +72,12 @@ async def test_get_training_entry_by_id_fails_because_false_user_id(
     training_database,
     create_card_entry,
     create_training_entry,
+    create_dog_entry,
 ):
     false_user_id = "test2"
+    dog = await create_dog_entry()
     card = await create_card_entry()
-    training = await create_training_entry(card_id=card.id)
+    training = await create_training_entry(card_id=card.id, dogs=[dog.id])
 
     with pytest.raises(
         TrainingNotFound,
@@ -205,11 +214,12 @@ async def test_get_trainings_by_referenced_card_id(
     training_database,
     create_training_entry,
     create_card_entry,
+    create_dog_entry,
     user_id,
 ):
     card: Card = await create_card_entry()
-
-    training: Training = await create_training_entry(card_id=card.id)
+    dog = await create_dog_entry()
+    training: Training = await create_training_entry(card_id=card.id, dogs=[dog.id])
 
     actual_card = await training_database.get_card_entry_by_id(
         card_id=card.id, user_id=user_id
@@ -221,12 +231,14 @@ async def test_get_trainings_by_referenced_card_id(
 async def test_get_card_by_referenced_in_training(
     create_card_entry,
     create_training_entry,
+    create_dog_entry,
     training_database,
     user_id,
 ):
     card = await create_card_entry()
+    dog = await create_dog_entry()
 
-    training = await create_training_entry(card_id=card.id)
+    training = await create_training_entry(card_id=card.id, dogs=[dog.id])
 
     actual_training = await training_database.get_training_entry_by_id(
         training_id=training[0].id, user_id=user_id
@@ -262,6 +274,7 @@ async def test_get_all_cards_but_not_cards_exists(training_database, user_id):
 
 async def test_get_training_entry_as_dict(
     create_training_entry,
+    create_dog_entry,
     training_timestamp,
     training_type,
     training_dogs,
@@ -269,14 +282,15 @@ async def test_get_training_entry_as_dict(
     user_id,
 ):
     card = await create_card_entry()
-    training = await create_training_entry(card_id=card.id)
+    dog = await create_dog_entry()
+    training = await create_training_entry(card_id=card.id, dogs=[dog.id])
     assert (
         training[0].as_dict().items()
         == dict(
             id=training[0].id,
             timestamp=training_timestamp,
             type=training_type,
-            dog=training_dogs[0],
+            dog_id=dog.id,
             card_id=card.id,
             user_id=user_id,
         ).items()
@@ -345,3 +359,140 @@ async def test_create_training_entry_but_assign_overflowing_trainings_to_new_car
 
     assert trainings[0].card_id == card.id
     assert trainings[1].card_id == card_new.id
+
+
+@pytest.mark.parametrize(
+    "registration_time",
+    [
+        "wfe",
+        list(),
+        dict(),
+        -1,
+    ],
+)
+async def test_dog_spec_registration_time_invalid(
+    user_id,
+    registration_time,
+):
+    with pytest.raises(
+        DogSpecInvalid,
+        match=re.escape(
+            f"The registration_time of a dog can not be below 0 and "
+            f"has to be of the type int but was: {registration_time} and "
+            f"of type: {type(registration_time)}"
+        ),
+    ):
+        DogSpec(
+            registration_time=registration_time,
+            name="test",
+            user_id=user_id,
+        )
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        list(),
+        dict(),
+        -1,
+    ],
+)
+async def test_dog_spec_name_invalid(
+    user_id,
+    name,
+):
+    with pytest.raises(
+        DogSpecInvalid,
+        match=re.escape(
+            f"The name of a dog has to be of type str but was: {name} "
+            f"and of type: {type(name)}"
+        ),
+    ):
+        DogSpec(
+            registration_time=738,
+            name=name,
+            user_id=user_id,
+        )
+
+
+@pytest.mark.parametrize(
+    "user_id",
+    [
+        list(),
+        dict(),
+        -1,
+    ],
+)
+async def test_dog_spec_user_id_invalid(
+    user_id,
+):
+    with pytest.raises(
+        DogSpecInvalid,
+        match=re.escape(
+            f"The user_id of a dog has to be of type str but was: {user_id} "
+            f"and of type: {type(user_id)}"
+        ),
+    ):
+        DogSpec(
+            registration_time=738,
+            name="test",
+            user_id=user_id,
+        )
+
+
+async def test_create_dog_entry(
+    user_id, create_dog_entry, dog_name, dog_registration_time
+):
+    dog = await create_dog_entry()
+
+    assert dog.name == dog_name
+    assert dog.registration_time == dog_registration_time
+    assert dog.user_id == user_id
+
+
+async def test_create_dog_entry_by_id(
+    training_database,
+    user_id,
+    create_dog_entry,
+):
+    expected_dog = await create_dog_entry()
+    actual_dog = await training_database.get_dog_by_id(
+        dog_id=expected_dog.id, user_id=user_id
+    )
+
+    assert expected_dog.name == actual_dog.name
+    assert expected_dog.user_id == actual_dog.user_id
+
+
+async def test_get_dog_by_id_but_no_dog_exists(
+    training_database,
+    user_id,
+):
+    dog_id = "test_dog"
+    with pytest.raises(
+        DogNotFound, match=f"The requested dog entry with id: {dog_id} does not exist"
+    ):
+        await training_database.get_dog_by_id(dog_id=dog_id, user_id=user_id)
+
+
+async def test_get_all_dogs(
+    training_database,
+    create_dog_entry,
+    user_id,
+    dog_registration_time,
+    dog_name,
+):
+    dog = await create_dog_entry()
+
+    await training_database.create_dog_entry(
+        dog_spec=DogSpec(
+            registration_time=dog_registration_time,
+            name=dog_name,
+            user_id="tjiwoa",
+        )
+    )
+
+    dogs = await training_database.get_all_dogs(user_id=user_id)
+
+    assert len(dogs) == 1
+    assert dogs[0].id == dog.id

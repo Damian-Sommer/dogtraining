@@ -8,7 +8,7 @@ from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import selectinload
 
-from dogtraining.server.models import Card, Training
+from dogtraining.server.models import Card, Dog, Training
 
 
 class TrainingType(StrEnum):
@@ -132,12 +132,53 @@ class CardSpec:
             if k not in data:
                 raise InvalidPayload(
                     f"You have to provide a payload with the following keys: {keys}"
-
                 )
         return cls(
             timestamp=data["timestamp"],
             cost=data["cost"],
             slots=data["slots"],
+            user_id=user_id,
+        )
+
+
+@attrs.define
+class DogSpec:
+    registration_time: int = attrs.field()
+    name: str = attrs.field()
+    user_id: str = attrs.field()
+
+    @registration_time.validator
+    def check_registration_time(self, attribute, value):
+        if not isinstance(value, int) or value <= 0:
+            raise DogSpecInvalid(
+                f"The registration_time of a dog can not be below 0 and has to be of the type int but was: {value} and of type: {type(value)}",
+            )
+
+    @name.validator
+    def check_name(self, attribute, value):
+        if not isinstance(value, str):
+            raise DogSpecInvalid(
+                f"The name of a dog has to be of type str but was: {value} and of type: {type(value)}",
+            )
+
+    @user_id.validator
+    def check_user_id(self, attribute, value):
+        if not isinstance(value, str):
+            raise DogSpecInvalid(
+                f"The user_id of a dog has to be of type str but was: {value} and of type: {type(value)}",
+            )
+
+    @classmethod
+    def from_json(cls, *, data, user_id):
+        keys = ["registration_time", "name"]
+        for k in keys:
+            if k not in data:
+                raise InvalidPayload(
+                    f"You have to provide a payload with the following keys: {keys}"
+                )
+        return cls(
+            registration_time=data["registration_time"],
+            name=data["name"],
             user_id=user_id,
         )
 
@@ -169,11 +210,11 @@ class TrainingDatabase:
                         id=str(uuid.uuid4()),
                         timestamp=training_spec.timestamp,
                         type=str(training_spec.type),
-                        dog=dog,
+                        dog_id=dog_id,
                         card_id=training_spec.card_id,
                         user_id=training_spec.user_id,
                     )
-                    for dog in training_spec.dogs[:available_slots]
+                    for dog_id in training_spec.dogs[:available_slots]
                 ]
 
                 trainings_new_card: List[Training] = [
@@ -181,11 +222,11 @@ class TrainingDatabase:
                         id=str(uuid.uuid4()),
                         timestamp=training_spec.timestamp,
                         type=str(training_spec.type),
-                        dog=dog,
+                        dog_id=dog_id,
                         card_id=training_spec.new_card_id,
                         user_id=training_spec.user_id,
                     )
-                    for dog in training_spec.dogs[available_slots:]
+                    for dog_id in training_spec.dogs[available_slots:]
                 ]
 
                 trainings = trainings_old_card + trainings_new_card
@@ -204,6 +245,7 @@ class TrainingDatabase:
                         .where(Training.user_id == user_id)
                         .where(Training.id == training_id)
                         .options(selectinload(Training.card))
+                        .options(selectinload(Training.dog))
                     )
                     return result.scalars().one()
                 except NoResultFound:
@@ -218,6 +260,7 @@ class TrainingDatabase:
                     select(Training)
                     .where(Training.user_id == user_id)
                     .options(selectinload(Training.card))
+                    .options(selectinload(Training.dog))
                 )
                 return result.scalars().all()
 
@@ -262,6 +305,43 @@ class TrainingDatabase:
                 )
                 return result.scalars().all()
 
+    async def create_dog_entry(self, *, dog_spec: DogSpec) -> Dog:
+        async with self.async_session() as session:
+            async with session.begin():
+                dog = Dog(
+                    id=str(uuid.uuid4()),
+                    registration_time=dog_spec.registration_time,
+                    name=dog_spec.name,
+                    user_id=dog_spec.user_id,
+                )
+                session.add(dog)
+                await session.flush()
+                await session.commit()
+                return dog
+
+    async def get_dog_by_id(self, *, dog_id, user_id):
+        async with self.async_session() as session:
+            async with session.begin():
+                try:
+                    result = await session.execute(
+                        select(Dog)
+                        .where(Dog.user_id == user_id)
+                        .where(Dog.id == dog_id)
+                    )
+                    return result.scalars().one()
+                except NoResultFound:
+                    raise DogNotFound(
+                        f"The requested dog entry with id: {dog_id} does not exist"
+                    )
+
+    async def get_all_dogs(self, *, user_id):
+        async with self.async_session() as session:
+            async with session.begin():
+                result = await session.execute(
+                    select(Dog).where(Dog.user_id == user_id)
+                )
+                return result.scalars().all()
+
 
 class TrainingSpecInvalid(Exception):
     pass
@@ -288,4 +368,12 @@ class InvalidPayload(Exception):
 
 
 class CardFull(Exception):
+    pass
+
+
+class DogSpecInvalid(Exception):
+    pass
+
+
+class DogNotFound(Exception):
     pass

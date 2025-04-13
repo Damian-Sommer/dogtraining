@@ -3,7 +3,12 @@ import pytest
 from aiohttp import web
 
 from dogtraining.server.models import Card
-from dogtraining.server.training_database import CardSpec, TrainingSpec
+from dogtraining.server.training_database import (
+    CardSpec,
+    DogSpec,
+    TrainingSpec,
+    TrainingType,
+)
 from dogtraining.server.training_handler import TrainingHandler, user_authentication
 
 
@@ -19,6 +24,10 @@ async def client(aiohttp_client, training_database):
             web.get("/cards/{id}", training_handler.get_card_by_id),
             web.post("/cards", training_handler.create_card_entry),
             web.post("/trainings", training_handler.create_training_entry),
+            web.get("/training_types", training_handler.get_all_training_types),
+            web.post("/dogs", training_handler.create_dog_entry),
+            web.get("/dogs", training_handler.get_all_dogs),
+            web.get("/dogs/{id}", training_handler.get_dog_by_id),
         ]
     )
     return await aiohttp_client(app)
@@ -33,10 +42,16 @@ async def test_user_id_is_not_in_request_header_returns_error(client):
 
 
 async def test_get_all_trainings(
-    client, create_card_entry, create_training_entry, user_id
+    client,
+    create_card_entry,
+    create_training_entry,
+    create_dog_entry,
+    user_id,
 ):
     card = await create_card_entry()
-    training = await create_training_entry(card_id=card.id)
+
+    dog = await create_dog_entry()
+    training = await create_training_entry(card_id=card.id, dogs=[dog.id])
     response = await client.get("/trainings", headers={"user_id": user_id})
     assert response.status == 200
     trainings = await response.json()
@@ -57,10 +72,16 @@ async def test_return_exception_if_training_does_not_exist(client, user_id):
 
 
 async def test_get_training_by_id(
-    client, create_card_entry, create_training_entry, user_id
+    client,
+    create_card_entry,
+    create_training_entry,
+    create_dog_entry,
+    user_id,
 ):
     card = await create_card_entry()
-    training = await create_training_entry(card_id=card.id)
+
+    dog = await create_dog_entry()
+    training = await create_training_entry(card_id=card.id, dogs=[dog.id])
     response = await client.get(
         f"/trainings/{training[0].id}", headers={"user_id": user_id}
     )
@@ -155,15 +176,17 @@ async def test_create_training_entry_with_valid_data_succeeds(
     client,
     create_card_entry,
     training_timestamp,
+    create_dog_entry,
     training_type,
     training_dogs,
     user_id,
 ):
+    dog = await create_dog_entry()
     card = await create_card_entry()
     training_spec = TrainingSpec(
         timestamp=training_timestamp,
         type=training_type,
-        dogs=training_dogs,
+        dogs=[dog.id],
         card_id=card.id,
         user_id=user_id,
     )
@@ -173,7 +196,7 @@ async def test_create_training_entry_with_valid_data_succeeds(
     assert response.status == 200
     assert (await response.json())[0].items() >= dict(
         timestamp=training_timestamp,
-        dog=training_dogs[0],
+        dog_id=dog.id,
         type=training_type,
     ).items()
 
@@ -206,16 +229,18 @@ async def test_create_training_entry_but_card_will_be_overflown(
     client,
     create_card_entry,
     training_type,
+    create_dog_entry,
     training_timestamp,
     user_id,
 ):
-    dogs = ["some", "dog"]
+    dog = await create_dog_entry()
+    dog2 = await create_dog_entry()
     card: Card = await create_card_entry()
     card_new: Card = await create_card_entry()
     training_spec = TrainingSpec(
         timestamp=training_timestamp,
         type=training_type,
-        dogs=dogs,
+        dogs=[dog.id, dog2.id],
         card_id=card.id,
         new_card_id=card_new.id,
         user_id=user_id,
@@ -229,7 +254,7 @@ async def test_create_training_entry_but_card_will_be_overflown(
         response_json[0].items()
         >= dict(
             timestamp=training_timestamp,
-            dog=dogs[0],
+            dog_id=dog.id,
             type=training_type,
             card_id=card.id,
             user_id=user_id,
@@ -239,9 +264,91 @@ async def test_create_training_entry_but_card_will_be_overflown(
         response_json[1].items()
         >= dict(
             timestamp=training_timestamp,
-            dog=dogs[1],
+            dog_id=dog2.id,
             type=training_type,
             card_id=card_new.id,
+            user_id=user_id,
+        ).items()
+    )
+
+
+async def test_get_all_training_types(client, user_id):
+    response = await client.get("/training_types", headers={"user_id": user_id})
+    assert response.status == 200
+    response_json = await response.json()
+    assert response_json == [type.value for type in TrainingType]
+
+
+async def test_register_dogs_in_database_fails_invalid_registration_time(
+    client,
+    user_id,
+):
+    response = await client.post(
+        "/dogs",
+        json={},
+        headers={"user_id": user_id},
+    )
+    assert response.status == 400
+    response_json = await response.json()
+
+    assert response_json == {
+        "error": f"You have to provide a payload with the following keys: {["registration_time", "name"]}"
+    }
+
+
+async def test_get_dog_by_id(client, create_dog_entry, user_id):
+    dog = await create_dog_entry()
+
+    response = await client.get(
+        f"/dogs/{dog.id}",
+        headers={"user_id": user_id},
+    )
+
+    assert response.status == 200
+    response_json = await response.json()
+    assert (
+        response_json.items()
+        == dict(
+            id=dog.id,
+            registration_time=dog.registration_time,
+            name=dog.name,
+            user_id=user_id,
+        ).items()
+    )
+
+
+async def test_get_all_dogs(
+    client,
+    create_dog_entry,
+    training_database,
+    user_id,
+    dog_name,
+    dog_registration_time,
+):
+    dog = await create_dog_entry()
+
+    await training_database.create_dog_entry(
+        dog_spec=DogSpec(
+            registration_time=dog_registration_time,
+            name=dog_name,
+            user_id="tjiwoa",
+        )
+    )
+
+    response = await client.get(
+        "/dogs",
+        headers={"user_id": user_id},
+    )
+
+    assert response.status == 200
+    response_json = await response.json()
+    assert len(response_json) == 1
+    assert (
+        response_json[0].items()
+        == dict(
+            id=dog.id,
+            registration_time=dog.registration_time,
+            name=dog.name,
             user_id=user_id,
         ).items()
     )

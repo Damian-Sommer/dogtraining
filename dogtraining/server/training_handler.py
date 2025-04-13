@@ -5,9 +5,12 @@ from dogtraining.server.training_database import (
     CardNotFound,
     CardSpec,
     DatabaseException,
+    DogSpec,
+    DogSpecInvalid,
     InvalidPayload,
     TrainingDatabase,
     TrainingSpec,
+    TrainingType,
 )
 
 
@@ -23,6 +26,25 @@ async def user_authentication(request, handler):
         )
     resp = await handler(request)
     return resp
+
+
+@web.middleware
+async def cors_handler(request: web.Request, handler):
+    cors_headers = {
+        "Access-Control-Allow-Origin": "http://localhost:5173",
+        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type,Authorization,user_id",
+    }
+
+    if request.method == "OPTIONS":
+        return web.Response(status=204, headers=cors_headers)
+
+    response = await handler(request)
+
+    for key, value in cors_headers.items():
+        response.headers[key] = value
+
+    return response
 
 
 class TrainingHandler:
@@ -102,3 +124,40 @@ class TrainingHandler:
                     "error": str(e),
                 },
             )
+
+    async def get_all_training_types(self, request: web.Request):
+        return web.json_response(data=[type.value for type in TrainingType])
+
+    async def create_dog_entry(self, request: web.Request):
+        try:
+            dog_spec = DogSpec.from_json(
+                data=await request.json(), user_id=request.headers.get("user_id")
+            )
+            dogs = await self._training_database.create_dog_entry(
+                dog_spec=dog_spec,
+            )
+            return web.json_response(data=[dog.as_dict() for dog in dogs])
+        except (InvalidPayload, DogSpecInvalid) as e:
+            return web.json_response(
+                status=400,
+                data={
+                    "error": str(e),
+                },
+            )
+
+    async def get_dog_by_id(self, request: web.Request):
+        dog_id = request.match_info["id"]
+        try:
+            dog = await self._training_database.get_dog_by_id(
+                dog_id=dog_id,
+                user_id=request.headers.get("user_id"),
+            )
+            return web.json_response(data=dog.as_dict())
+        except DatabaseException as e:
+            return web.json_response(status=400, data={"error": str(e)})
+
+    async def get_all_dogs(self, request: web.Request):
+        dogs = await self._training_database.get_all_dogs(
+            user_id=request.headers.get("user_id")
+        )
+        return web.json_response(data=[dog.as_dict() for dog in dogs])

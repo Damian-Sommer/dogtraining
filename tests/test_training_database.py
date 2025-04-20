@@ -33,9 +33,9 @@ async def test_create_training_entry_with_valid_data_succeeds(
     create_dog_entry,
 ):
     dog = await create_dog_entry()
-    dog2 = await create_dog_entry()
+    await create_dog_entry()
     card = await create_card_entry()
-    actual_training = await create_training_entry(card_id=card.id, dogs=[dog.id])
+    actual_training = await create_training_entry(dogs=[dog.id])
 
     assert actual_training[0].timestamp == training_timestamp
     assert actual_training[0].type == training_type
@@ -48,7 +48,6 @@ async def test_get_training_entry_by_id(
     training_database,
     training_timestamp,
     training_type,
-    training_dogs,
     create_card_entry,
     create_training_entry,
     create_dog_entry,
@@ -56,7 +55,7 @@ async def test_get_training_entry_by_id(
 ):
     card = await create_card_entry()
     dog = await create_dog_entry()
-    training = await create_training_entry(card_id=card.id, dogs=[dog.id])
+    training = await create_training_entry(dogs=[dog.id])
 
     actual_training: Training = await training_database.get_training_entry_by_id(
         training_id=training[0].id, user_id=user_id
@@ -76,8 +75,8 @@ async def test_get_training_entry_by_id_fails_because_false_user_id(
 ):
     false_user_id = "test2"
     dog = await create_dog_entry()
-    card = await create_card_entry()
-    training = await create_training_entry(card_id=card.id, dogs=[dog.id])
+    await create_card_entry()
+    training = await create_training_entry(dogs=[dog.id])
 
     with pytest.raises(
         TrainingNotFound,
@@ -108,7 +107,7 @@ async def test_get_all_training_entries(
     training_type,
     user_id,
 ):
-    card = await training_database.create_card_entry(
+    await training_database.create_card_entry(
         card_spec=CardSpec(
             timestamp=1,
             slots=6,
@@ -122,7 +121,6 @@ async def test_get_all_training_entries(
             timestamp=i + 1,
             type=training_type,
             dogs=[str(i + 1)],
-            card_id=card.id,
             user_id=user_id,
         )
         for i in range(4)
@@ -219,7 +217,7 @@ async def test_get_trainings_by_referenced_card_id(
 ):
     card: Card = await create_card_entry()
     dog = await create_dog_entry()
-    training: Training = await create_training_entry(card_id=card.id, dogs=[dog.id])
+    training: Training = await create_training_entry(dogs=[dog.id])
 
     actual_card = await training_database.get_card_entry_by_id(
         card_id=card.id, user_id=user_id
@@ -238,7 +236,7 @@ async def test_get_card_by_referenced_in_training(
     card = await create_card_entry()
     dog = await create_dog_entry()
 
-    training = await create_training_entry(card_id=card.id, dogs=[dog.id])
+    training = await create_training_entry(dogs=[dog.id])
 
     actual_training = await training_database.get_training_entry_by_id(
         training_id=training[0].id, user_id=user_id
@@ -283,7 +281,7 @@ async def test_get_training_entry_as_dict(
 ):
     card = await create_card_entry()
     dog = await create_dog_entry()
-    training = await create_training_entry(card_id=card.id, dogs=[dog.id])
+    training = await create_training_entry(dogs=[dog.id])
     assert (
         training[0].as_dict().items()
         == dict(
@@ -321,15 +319,14 @@ async def test_create_training_entry_but_card_is_full_raises_exception(
     training_type,
     user_id,
 ):
-    card = await create_card_entry()
+    await create_card_entry()
     with pytest.raises(
         CardFull,
-        match=f"The card: {card.id} has not enough slots for this training entry, please create a new card entry with and provide it as 'new_card' in the payload.",
+        match="Only 1 slot available but 2 amount of slots are required, register a new card first before trying this operation again.",
     ):
         await training_database.create_training_entry(
             training_spec=TrainingSpec(
                 timestamp=training_timestamp,
-                card_id=card.id,
                 type=training_type,
                 dogs=["some-0", "some-1"],
                 user_id=user_id,
@@ -349,8 +346,6 @@ async def test_create_training_entry_but_assign_overflowing_trainings_to_new_car
     trainings = await training_database.create_training_entry(
         training_spec=TrainingSpec(
             timestamp=training_timestamp,
-            card_id=card.id,
-            new_card_id=card_new.id,
             type=training_type,
             dogs=["some-0", "some-1"],
             user_id=user_id,

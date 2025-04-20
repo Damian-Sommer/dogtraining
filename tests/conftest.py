@@ -1,9 +1,10 @@
 import pytest
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from dogtraining.server.models import Base, Card, Training
+from dogtraining.server.models import Base, Card, Dog, Training
 from dogtraining.server.training_database import (
     CardSpec,
+    DogSpec,
     TrainingDatabase,
     TrainingSpec,
     TrainingType,
@@ -50,6 +51,30 @@ async def training_database(init_db, connection):
 
 
 @pytest.fixture
+def dog_name():
+    return "test"
+
+
+@pytest.fixture
+def dog_registration_time():
+    return 19
+
+
+@pytest.fixture
+def create_dog_entry(training_database, user_id, dog_name, dog_registration_time):
+    async def create_entry() -> Dog:
+        return await training_database.create_dog_entry(
+            dog_spec=DogSpec(
+                registration_time=dog_registration_time,
+                name=dog_name,
+                user_id=user_id,
+            )
+        )
+
+    return create_entry
+
+
+@pytest.fixture
 def create_card_entry(training_database: TrainingDatabase, user_id):
     async def create_entry() -> Card:
         return await training_database.create_card_entry(
@@ -69,16 +94,14 @@ def create_training_entry(
     training_database: TrainingDatabase,
     training_timestamp,
     training_type,
-    training_dogs,
     user_id,
 ):
-    async def create_entry(card_id) -> Training:
+    async def create_entry(dogs: list) -> Training:
         return await training_database.create_training_entry(
             training_spec=TrainingSpec(
                 timestamp=training_timestamp,
-                card_id=card_id,
                 type=training_type,
-                dogs=training_dogs,
+                dogs=dogs,
                 user_id=user_id,
             )
         )

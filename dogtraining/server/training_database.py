@@ -8,7 +8,7 @@ from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import selectinload
 
-from dogtraining.server.models import Card, Training
+from dogtraining.server.models import Card, Dog, Training
 
 
 class TrainingType(StrEnum):
@@ -22,9 +22,7 @@ class TrainingSpec:
     timestamp: int = attrs.field()
     type: TrainingType = attrs.field()
     dogs: List[str] = attrs.field()
-    card_id: str = attrs.field()
     user_id: str = attrs.field()
-    new_card_id: str = attrs.field(default=None)
 
     @type.validator
     def check_type(self, attribute, value):
@@ -51,20 +49,6 @@ class TrainingSpec:
                 f"The dogs of a training have to be of type: List[str], but was: {type(value)}",
             )
 
-    @card_id.validator
-    def check_card_id(self, attribute, value):
-        if not isinstance(value, str):
-            raise TrainingSpecInvalid(
-                f"The card_id of a training has to be of type str but was: {value} and of type: {type(value)}",
-            )
-
-    @new_card_id.validator
-    def check_new_card_id(self, attribute, value):
-        if value is not None and not isinstance(value, str):
-            raise TrainingSpecInvalid(
-                f"The new_card_id of a training has to be of type str or None but was: {value} and of type: {type(value)}",
-            )
-
     @user_id.validator
     def check_user_id(self, attribute, value):
         if not isinstance(value, str):
@@ -74,7 +58,7 @@ class TrainingSpec:
 
     @classmethod
     def from_json(cls, *, data, user_id):
-        keys = ["timestamp", "type", "dogs", "card_id"]
+        keys = ["timestamp", "type", "dogs"]
         for k in keys:
             if k not in data:
                 raise InvalidPayload(
@@ -84,8 +68,6 @@ class TrainingSpec:
             timestamp=data["timestamp"],
             type=data["type"],
             dogs=data["dogs"],
-            card_id=data["card_id"],
-            new_card_id=data.get("new_card_id", None),
             user_id=user_id,
         )
 
@@ -132,12 +114,53 @@ class CardSpec:
             if k not in data:
                 raise InvalidPayload(
                     f"You have to provide a payload with the following keys: {keys}"
-
                 )
         return cls(
             timestamp=data["timestamp"],
             cost=data["cost"],
             slots=data["slots"],
+            user_id=user_id,
+        )
+
+
+@attrs.define
+class DogSpec:
+    registration_time: int = attrs.field()
+    name: str = attrs.field()
+    user_id: str = attrs.field()
+
+    @registration_time.validator
+    def check_registration_time(self, attribute, value):
+        if not isinstance(value, int) or value <= 0:
+            raise DogSpecInvalid(
+                f"The registration_time of a dog can not be below 0 and has to be of the type int but was: {value} and of type: {type(value)}",
+            )
+
+    @name.validator
+    def check_name(self, attribute, value):
+        if not isinstance(value, str):
+            raise DogSpecInvalid(
+                f"The name of a dog has to be of type str but was: {value} and of type: {type(value)}",
+            )
+
+    @user_id.validator
+    def check_user_id(self, attribute, value):
+        if not isinstance(value, str):
+            raise DogSpecInvalid(
+                f"The user_id of a dog has to be of type str but was: {value} and of type: {type(value)}",
+            )
+
+    @classmethod
+    def from_json(cls, *, data, user_id):
+        keys = ["registration_time", "name"]
+        for k in keys:
+            if k not in data:
+                raise InvalidPayload(
+                    f"You have to provide a payload with the following keys: {keys}"
+                )
+        return cls(
+            registration_time=data["registration_time"],
+            name=data["name"],
             user_id=user_id,
         )
 
@@ -150,46 +173,31 @@ class TrainingDatabase:
     async def create_training_entry(
         self, *, training_spec: TrainingSpec
     ) -> List[Training]:
-        card: Card = await self.get_card_entry_by_id(
-            card_id=training_spec.card_id, user_id=training_spec.user_id
+        cards: List[Card] = await self._get_all_free_cards(
+            user_id=training_spec.user_id,
         )
+        free_slots_per_card = [
+            card.id for card in cards for _ in range(card.slots - len(card.trainings))
+        ]
+        free_slots = len(free_slots_per_card)
+        if len(training_spec.dogs) > free_slots:
+            raise CardFull(
+                f"Only {free_slots} slot available but {len(training_spec.dogs)} amount of slots are required, register a new card first before trying this operation again."
+            )
         async with self.async_session() as session:
             async with session.begin():
-                if (
-                    len(card.trainings) + len(training_spec.dogs) > card.slots
-                    and training_spec.new_card_id is None
-                ):
-                    raise CardFull(
-                        f"The card: {card.id} has not enough slots for this training entry, please create a new card entry with and provide it as 'new_card' in the payload."
+                trainings: List[Training] = []
+                for dog_id in training_spec.dogs:
+                    trainings.append(
+                        Training(
+                            id=str(uuid.uuid4()),
+                            timestamp=training_spec.timestamp,
+                            type=str(training_spec.type),
+                            dog_id=dog_id,
+                            card_id=free_slots_per_card.pop(0),
+                            user_id=training_spec.user_id,
+                        )
                     )
-                available_slots = card.slots - len(card.trainings)
-
-                trainings_old_card: List[Training] = [
-                    Training(
-                        id=str(uuid.uuid4()),
-                        timestamp=training_spec.timestamp,
-                        type=str(training_spec.type),
-                        dog=dog,
-                        card_id=training_spec.card_id,
-                        user_id=training_spec.user_id,
-                    )
-                    for dog in training_spec.dogs[:available_slots]
-                ]
-
-                trainings_new_card: List[Training] = [
-                    Training(
-                        id=str(uuid.uuid4()),
-                        timestamp=training_spec.timestamp,
-                        type=str(training_spec.type),
-                        dog=dog,
-                        card_id=training_spec.new_card_id,
-                        user_id=training_spec.user_id,
-                    )
-                    for dog in training_spec.dogs[available_slots:]
-                ]
-
-                trainings = trainings_old_card + trainings_new_card
-
                 session.add_all(trainings)
                 await session.flush()
                 await session.commit()
@@ -204,6 +212,7 @@ class TrainingDatabase:
                         .where(Training.user_id == user_id)
                         .where(Training.id == training_id)
                         .options(selectinload(Training.card))
+                        .options(selectinload(Training.dog))
                     )
                     return result.scalars().one()
                 except NoResultFound:
@@ -218,6 +227,7 @@ class TrainingDatabase:
                     select(Training)
                     .where(Training.user_id == user_id)
                     .options(selectinload(Training.card))
+                    .options(selectinload(Training.dog))
                 )
                 return result.scalars().all()
 
@@ -262,6 +272,47 @@ class TrainingDatabase:
                 )
                 return result.scalars().all()
 
+    async def _get_all_free_cards(self, *, user_id) -> List[Card]:
+        cards: List[Card] = await self.get_all_card_entries(user_id=user_id)
+        return [card for card in cards for _ in range(card.slots - len(card.trainings))]
+
+    async def create_dog_entry(self, *, dog_spec: DogSpec) -> Dog:
+        async with self.async_session() as session:
+            async with session.begin():
+                dog = Dog(
+                    id=str(uuid.uuid4()),
+                    registration_time=dog_spec.registration_time,
+                    name=dog_spec.name,
+                    user_id=dog_spec.user_id,
+                )
+                session.add(dog)
+                await session.flush()
+                await session.commit()
+                return dog
+
+    async def get_dog_by_id(self, *, dog_id, user_id):
+        async with self.async_session() as session:
+            async with session.begin():
+                try:
+                    result = await session.execute(
+                        select(Dog)
+                        .where(Dog.user_id == user_id)
+                        .where(Dog.id == dog_id)
+                    )
+                    return result.scalars().one()
+                except NoResultFound:
+                    raise DogNotFound(
+                        f"The requested dog entry with id: {dog_id} does not exist"
+                    )
+
+    async def get_all_dogs(self, *, user_id):
+        async with self.async_session() as session:
+            async with session.begin():
+                result = await session.execute(
+                    select(Dog).where(Dog.user_id == user_id)
+                )
+                return result.scalars().all()
+
 
 class TrainingSpecInvalid(Exception):
     pass
@@ -288,4 +339,12 @@ class InvalidPayload(Exception):
 
 
 class CardFull(Exception):
+    pass
+
+
+class DogSpecInvalid(Exception):
+    pass
+
+
+class DogNotFound(Exception):
     pass

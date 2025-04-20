@@ -96,11 +96,10 @@ def create_training_entry(
     training_type,
     user_id,
 ):
-    async def create_entry(card_id, dogs: list) -> Training:
+    async def create_entry(dogs: list) -> Training:
         return await training_database.create_training_entry(
             training_spec=TrainingSpec(
                 timestamp=training_timestamp,
-                card_id=card_id,
                 type=training_type,
                 dogs=dogs,
                 user_id=user_id,

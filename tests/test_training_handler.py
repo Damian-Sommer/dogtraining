@@ -48,10 +48,10 @@ async def test_get_all_trainings(
     create_dog_entry,
     user_id,
 ):
-    card = await create_card_entry()
+    await create_card_entry()
 
     dog = await create_dog_entry()
-    training = await create_training_entry(card_id=card.id, dogs=[dog.id])
+    training = await create_training_entry(dogs=[dog.id])
     response = await client.get("/trainings", headers={"user_id": user_id})
     assert response.status == 200
     trainings = await response.json()
@@ -78,10 +78,10 @@ async def test_get_training_by_id(
     create_dog_entry,
     user_id,
 ):
-    card = await create_card_entry()
+    await create_card_entry()
 
     dog = await create_dog_entry()
-    training = await create_training_entry(card_id=card.id, dogs=[dog.id])
+    training = await create_training_entry(dogs=[dog.id])
     response = await client.get(
         f"/trainings/{training[0].id}", headers={"user_id": user_id}
     )
@@ -144,7 +144,7 @@ async def test_create_training_entry_with_invalid_payload_fails(client, user_id)
     )
     assert response.status == 400
     assert await response.json() == {
-        "error": f"You have to provide a payload with the following keys: {["timestamp", "type", "dogs", "card_id"]}"
+        "error": f"You have to provide a payload with the following keys: {["timestamp", "type", "dogs"]}"
     }
 
 
@@ -155,12 +155,10 @@ async def test_create_training_entry_but_card_does_not_exist(
     training_dogs,
     user_id,
 ):
-    card_id = "some-id"
     training_spec = TrainingSpec(
         timestamp=training_timestamp,
         type=training_type,
         dogs=training_dogs,
-        card_id=card_id,
         user_id=user_id,
     )
     response = await client.post(
@@ -168,7 +166,7 @@ async def test_create_training_entry_but_card_does_not_exist(
     )
     assert response.status == 400
     assert await response.json() == {
-        "error": f"The requested card entry with id: {card_id} does not exist"
+        "error": "Only 0 slot available but 1 amount of slots are required, register a new card first before trying this operation again."
     }
 
 
@@ -182,12 +180,11 @@ async def test_create_training_entry_with_valid_data_succeeds(
     user_id,
 ):
     dog = await create_dog_entry()
-    card = await create_card_entry()
+    await create_card_entry()
     training_spec = TrainingSpec(
         timestamp=training_timestamp,
         type=training_type,
         dogs=[dog.id],
-        card_id=card.id,
         user_id=user_id,
     )
     response = await client.post(
@@ -208,12 +205,11 @@ async def test_create_training_entry_but_card_will_be_overflown_raises_exception
     training_timestamp,
     user_id,
 ):
-    card = await create_card_entry()
+    await create_card_entry()
     training_spec = TrainingSpec(
         timestamp=training_timestamp,
         type=training_type,
         dogs=["some", "dog"],
-        card_id=card.id,
         user_id=user_id,
     )
     response = await client.post(
@@ -221,11 +217,11 @@ async def test_create_training_entry_but_card_will_be_overflown_raises_exception
     )
     assert response.status == 400
     assert await response.json() == {
-        "error": f"The card: {card.id} has not enough slots for this training entry, please create a new card entry with and provide it as 'new_card' in the payload.",
+        "error": "Only 1 slot available but 2 amount of slots are required, register a new card first before trying this operation again.",
     }
 
 
-async def test_create_training_entry_but_card_will_be_overflown(
+async def test_create_two_training_entries_with_two_card_entries(
     client,
     create_card_entry,
     training_type,
@@ -241,8 +237,6 @@ async def test_create_training_entry_but_card_will_be_overflown(
         timestamp=training_timestamp,
         type=training_type,
         dogs=[dog.id, dog2.id],
-        card_id=card.id,
-        new_card_id=card_new.id,
         user_id=user_id,
     )
     response = await client.post(

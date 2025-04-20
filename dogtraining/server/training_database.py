@@ -22,9 +22,7 @@ class TrainingSpec:
     timestamp: int = attrs.field()
     type: TrainingType = attrs.field()
     dogs: List[str] = attrs.field()
-    card_id: str = attrs.field()
     user_id: str = attrs.field()
-    new_card_id: str = attrs.field(default=None)
 
     @type.validator
     def check_type(self, attribute, value):
@@ -51,20 +49,6 @@ class TrainingSpec:
                 f"The dogs of a training have to be of type: List[str], but was: {type(value)}",
             )
 
-    @card_id.validator
-    def check_card_id(self, attribute, value):
-        if not isinstance(value, str):
-            raise TrainingSpecInvalid(
-                f"The card_id of a training has to be of type str but was: {value} and of type: {type(value)}",
-            )
-
-    @new_card_id.validator
-    def check_new_card_id(self, attribute, value):
-        if value is not None and not isinstance(value, str):
-            raise TrainingSpecInvalid(
-                f"The new_card_id of a training has to be of type str or None but was: {value} and of type: {type(value)}",
-            )
-
     @user_id.validator
     def check_user_id(self, attribute, value):
         if not isinstance(value, str):
@@ -74,7 +58,7 @@ class TrainingSpec:
 
     @classmethod
     def from_json(cls, *, data, user_id):
-        keys = ["timestamp", "type", "dogs", "card_id"]
+        keys = ["timestamp", "type", "dogs"]
         for k in keys:
             if k not in data:
                 raise InvalidPayload(
@@ -84,8 +68,6 @@ class TrainingSpec:
             timestamp=data["timestamp"],
             type=data["type"],
             dogs=data["dogs"],
-            card_id=data["card_id"],
-            new_card_id=data.get("new_card_id", None),
             user_id=user_id,
         )
 
@@ -191,46 +173,31 @@ class TrainingDatabase:
     async def create_training_entry(
         self, *, training_spec: TrainingSpec
     ) -> List[Training]:
-        card: Card = await self.get_card_entry_by_id(
-            card_id=training_spec.card_id, user_id=training_spec.user_id
+        cards: List[Card] = await self._get_all_free_cards(
+            user_id=training_spec.user_id,
         )
+        free_slots_per_card = [
+            card.id for card in cards for _ in range(card.slots - len(card.trainings))
+        ]
+        free_slots = len(free_slots_per_card)
+        if len(training_spec.dogs) > free_slots:
+            raise CardFull(
+                f"Only {free_slots} slot available but {len(training_spec.dogs)} amount of slots are required, register a new card first before trying this operation again."
+            )
         async with self.async_session() as session:
             async with session.begin():
-                if (
-                    len(card.trainings) + len(training_spec.dogs) > card.slots
-                    and training_spec.new_card_id is None
-                ):
-                    raise CardFull(
-                        f"The card: {card.id} has not enough slots for this training entry, please create a new card entry with and provide it as 'new_card' in the payload."
+                trainings: List[Training] = []
+                for dog_id in training_spec.dogs:
+                    trainings.append(
+                        Training(
+                            id=str(uuid.uuid4()),
+                            timestamp=training_spec.timestamp,
+                            type=str(training_spec.type),
+                            dog_id=dog_id,
+                            card_id=free_slots_per_card.pop(0),
+                            user_id=training_spec.user_id,
+                        )
                     )
-                available_slots = card.slots - len(card.trainings)
-
-                trainings_old_card: List[Training] = [
-                    Training(
-                        id=str(uuid.uuid4()),
-                        timestamp=training_spec.timestamp,
-                        type=str(training_spec.type),
-                        dog_id=dog_id,
-                        card_id=training_spec.card_id,
-                        user_id=training_spec.user_id,
-                    )
-                    for dog_id in training_spec.dogs[:available_slots]
-                ]
-
-                trainings_new_card: List[Training] = [
-                    Training(
-                        id=str(uuid.uuid4()),
-                        timestamp=training_spec.timestamp,
-                        type=str(training_spec.type),
-                        dog_id=dog_id,
-                        card_id=training_spec.new_card_id,
-                        user_id=training_spec.user_id,
-                    )
-                    for dog_id in training_spec.dogs[available_slots:]
-                ]
-
-                trainings = trainings_old_card + trainings_new_card
-
                 session.add_all(trainings)
                 await session.flush()
                 await session.commit()
@@ -304,6 +271,10 @@ class TrainingDatabase:
                     .options(selectinload(Card.trainings))
                 )
                 return result.scalars().all()
+
+    async def _get_all_free_cards(self, *, user_id) -> List[Card]:
+        cards: List[Card] = await self.get_all_card_entries(user_id=user_id)
+        return [card for card in cards for _ in range(card.slots - len(card.trainings))]
 
     async def create_dog_entry(self, *, dog_spec: DogSpec) -> Dog:
         async with self.async_session() as session:

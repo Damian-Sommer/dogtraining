@@ -10,12 +10,12 @@
       </tr>
     </thead>
     <tbody>
-      <tr>
+      <tr v-for="(card, index) in cards" :key="index">
+        <td>{{ card.id }}</td>
+        <td>{{ card.slots }}</td>
         <td>1</td>
-        <td>12</td>
-        <td>1</td>
-        <td>29.03.2025</td>
-        <td>200</td>
+        <td>{{ new Date(card.timestamp).toLocaleDateString() }}</td>
+        <td>{{ card.cost }}</td>
       </tr>
     </tbody>
   </table>
@@ -24,8 +24,29 @@
 
 <script>
 import { defineComponent } from "vue";
-
-export default defineComponent({});
+import { card_api } from "../api/index.js";
+export default defineComponent({
+  data() {
+    return {
+      cards: [],
+    };
+  },
+  methods: {
+    fetch_all_cards() {
+      card_api.get_all().then((response) => {
+        this.cards = response;
+      });
+    }
+  },
+  created() {
+    this.fetch_all_cards();
+  },
+  mounted() {
+    setInterval(() => {
+      this.fetch_all_cards();
+    }, 4000);
+  },
+});
 </script>
 
 <style scoped>

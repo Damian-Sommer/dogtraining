@@ -4,8 +4,11 @@ import logging
 from aiohttp import web
 
 from dogtraining.server.training_database import TrainingDatabase
-from dogtraining.server.training_handler import TrainingHandler, user_authentication
-
+from dogtraining.server.training_handler import (
+    TrainingHandler,
+    cors_handler,
+    user_authentication,
+)
 
 parser = argparse.ArgumentParser(prog="Dogtraining Server")
 parser.add_argument(
@@ -23,9 +26,14 @@ parser.add_argument(
 _logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     args = parser.parse_args()
-    app = web.Application()
+    app = web.Application(
+        middlewares=[
+            cors_handler,
+            user_authentication,
+        ]
+    )
 
     async def init_db(app):
         _logger.info("Start Initializing Database")
@@ -41,6 +49,10 @@ if __name__ == "__main__":
                 web.get("/cards/{id}", training_handler.get_card_by_id),
                 web.post("/cards", training_handler.create_card_entry),
                 web.post("/trainings", training_handler.create_training_entry),
+                web.get("/training_types", training_handler.get_all_training_types),
+                web.post("/dogs", training_handler.create_dog_entry),
+                web.get("/dogs", training_handler.get_all_dogs),
+                web.get("/dogs/{id}", training_handler.get_dog_by_id),
             ]
         )
         _logger.info("Finished Initializing Routes")

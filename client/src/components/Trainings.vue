@@ -10,12 +10,12 @@
       </tr>
     </thead>
     <tbody>
-      <tr>
-        <td>1</td>
-        <td>uo spaziergang</td>
-        <td>vasco</td>
-        <td>1</td>
-        <td>29.03.2025</td>
+      <tr v-for="(training, index) in trainings" :key="index">
+        <td>{{ training.id }}</td>
+        <td>{{ training.type }}</td>
+        <td>{{ training.dog_id }}</td>
+        <td>{{ training.card_id }}</td>
+        <td>{{ new Date(training.timestamp).toLocaleDateString() }}</td>
       </tr>
     </tbody>
   </table>
@@ -24,8 +24,29 @@
 
 <script>
 import { defineComponent } from "vue";
-
-export default defineComponent({});
+import { training_api } from "../api/index.js";
+export default defineComponent({
+  data() {
+    return {
+      trainings: [],
+    };
+  },
+  methods: {
+    fetch_all_trainings() {
+      training_api.get_all().then((response) => {
+        this.trainings = response;
+      });
+    }
+  },
+  created() {
+    this.fetch_all_trainings();
+  },
+  mounted() {
+    setInterval(() => {
+      this.fetch_all_trainings();
+    }, 4000);
+  },
+});
 </script>
 
 <style scoped>

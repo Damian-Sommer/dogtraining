@@ -88,15 +88,13 @@ class Training extends API {
     return await response.json();
   }
 
-  async create_entry(timestamp, type, dogs, card_id, new_card_id = null) {
+  async create_entry(timestamp, type, dogs) {
     const response = await fetch(`${this.url}/trainings`, {
       method: "POST",
       body: JSON.stringify({
         timestamp: timestamp,
         type: type,
         dogs: dogs,
-        card_id: card_id,
-        new_card_id: new_card_id,
       }),
       headers: this.headers,
     });

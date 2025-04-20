@@ -1,10 +1,5 @@
 <template>
   <form>
-    <p style="color: red; font-weight: bolder">
-      !!! The Card Id is still in an undergoing development therefore this page
-      is not finished yet. Please dont use this way to create training entries
-      !!!
-    </p>
     <h2>Trainingsart</h2>
     <div v-for="(option, index) in training_type_options" :key="index">
       <label>
@@ -23,7 +18,7 @@
     <input v-model="date" type="date" name="date" id="date" />
   </form>
   <button @click="$router.push('/trainings')">Zurück</button>
-  <button @click="sendData">Eintragen</button>
+  <button @click="send_data">Eintragen</button>
 </template>
 
 <script>
@@ -61,10 +56,8 @@ export default defineComponent({
         timestamp,
         this.selected_training_type,
         this.selected_dogs,
-        (card_id = this.card_id),
-        (new_card_id = null)
       );
-      router.push("/cards");
+      router.push("/trainings");
     },
   },
   created() {

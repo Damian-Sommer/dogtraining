@@ -11,7 +11,7 @@
     />
   </form>
   <button @click="$router.push('/dogs')">Zurück</button>
-  <button @click="sendData">Erstellen</button>
+  <button @click="send_data">Erstellen</button>
 </template>
 
 <script>
@@ -27,7 +27,7 @@ export default defineComponent({
     };
   },
   methods: {
-    async sendData() {
+    async send_data() {
       if (
         this.registration_time == null ||
         this.registration_time === NaN ||

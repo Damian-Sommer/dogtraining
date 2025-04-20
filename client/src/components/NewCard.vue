@@ -8,7 +8,7 @@
     <input v-model="buyDate" type="date" name="buyDate" id="buyDate" />
   </form>
   <button @click="$router.push('/cards')">Zurück</button>
-  <button @click="sendData">Erstellen</button>
+  <button @click="send_data">Erstellen</button>
 </template>
 
 <script>

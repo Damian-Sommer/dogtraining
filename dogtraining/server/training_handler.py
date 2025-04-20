@@ -133,10 +133,10 @@ class TrainingHandler:
             dog_spec = DogSpec.from_json(
                 data=await request.json(), user_id=request.headers.get("user_id")
             )
-            dogs = await self._training_database.create_dog_entry(
+            dog = await self._training_database.create_dog_entry(
                 dog_spec=dog_spec,
             )
-            return web.json_response(data=[dog.as_dict() for dog in dogs])
+            return web.json_response(data=dog.as_dict())
         except (InvalidPayload, DogSpecInvalid) as e:
             return web.json_response(
                 status=400,

@@ -24,8 +24,19 @@
 
 <script>
 import { defineComponent } from "vue";
-
-export default defineComponent({});
+import { training_api } from "../api/index.js";
+export default defineComponent({
+  computed: {
+    trainings() {
+      setInterval(() => {
+        console.log("test");
+        let all_trainings = training_api.get_all();
+        console.table(all_trainings);
+        return all_trainings;
+      }, 4000);
+    }
+  }
+});
 </script>
 
 <style scoped>

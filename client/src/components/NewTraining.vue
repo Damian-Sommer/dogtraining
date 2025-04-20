@@ -1,9 +1,24 @@
 <template>
   <form>
-    <label for="slots">Verfügbare Trainings:</label><br />
-    <input v-model="slots" id="slots" name="slots" /><br />
-    <label for="cost">Kosten:</label><br />
-    <input v-model="cost" id="cost" name="cost" /><br /><br />
+    <p style="color: red; font-weight: bolder">
+      !!! The Card Id is still in an undergoing development therefore this page
+      is not finished yet. Please dont use this way to create training entries
+      !!!
+    </p>
+    <h2>Trainingsart</h2>
+    <div v-for="(option, index) in training_type_options" :key="index">
+      <label>
+        <input type="radio" :value="option" v-model="selected_training_type" />
+        {{ option[0].toUpperCase() + option.slice(1) }}
+      </label>
+    </div>
+    <h2>Hunde</h2>
+    <div v-for="option in dogs" :key="option.id">
+      <label>
+        <input type="checkbox" :value="option.id" v-model="selected_dogs" />
+        {{ option.name }}
+      </label>
+    </div>
     <label for="date">Datum</label><br />
     <input v-model="date" type="date" name="date" id="date" />
   </form>
@@ -13,8 +28,56 @@
 
 <script>
 import { defineComponent } from "vue";
+import { training_api, dog_api } from "../api/index";
+import router from "../index.js";
 
-export default defineComponent({});
+export default defineComponent({
+  data() {
+    return {
+      training_type_options: null,
+      selected_training_type: null,
+      dogs: null,
+      selected_dogs: [],
+      date: new Date().toISOString().split("T")[0],
+    };
+  },
+  methods: {
+    fetch_training_types() {
+      training_api.get_training_types().then((response) => {
+        this.training_type_options = response;
+      });
+    },
+    fetch_all_dogs() {
+      dog_api.get_all().then((response) => {
+        this.dogs = response;
+      });
+    },
+    async send_data() {
+      if (this.buyDate == null || this.buyDate === NaN || this.buyDate === "") {
+        this.buyDate = new Date().toISOString().split("T")[0];
+      }
+      let timestamp = new Date(this.buyDate).getTime();
+      await training_api.create_entry(
+        timestamp,
+        this.selected_training_type,
+        this.selected_dogs,
+        (card_id = this.card_id),
+        (new_card_id = null)
+      );
+      router.push("/cards");
+    },
+  },
+  created() {
+    this.fetch_training_types();
+    this.fetch_all_dogs();
+  },
+  mounted() {
+    setInterval(() => {
+      this.fetch_training_types();
+      this.fetch_all_dogs();
+    }, 4000);
+  },
+});
 </script>
 
 <style scoped>

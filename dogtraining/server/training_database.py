@@ -201,7 +201,13 @@ class TrainingDatabase:
                 session.add_all(trainings)
                 await session.flush()
                 await session.commit()
-                return trainings
+                returnable_trainings = [
+                    await self.get_training_entry_by_id(
+                        training_id=training.id, user_id=training_spec.user_id
+                    )
+                    for training in trainings
+                ]
+            return returnable_trainings
 
     async def get_training_entry_by_id(self, *, training_id, user_id) -> Training:
         async with self.async_session() as session:
@@ -211,8 +217,6 @@ class TrainingDatabase:
                         select(Training)
                         .where(Training.user_id == user_id)
                         .where(Training.id == training_id)
-                        .options(selectinload(Training.card))
-                        .options(selectinload(Training.dog))
                     )
                     return result.scalars().one()
                 except NoResultFound:
@@ -226,8 +230,6 @@ class TrainingDatabase:
                 result = await session.execute(
                     select(Training)
                     .where(Training.user_id == user_id)
-                    .options(selectinload(Training.card))
-                    .options(selectinload(Training.dog))
                 )
                 return result.scalars().all()
 
@@ -244,7 +246,9 @@ class TrainingDatabase:
                 session.add(card)
                 await session.flush()
                 await session.commit()
-                return card
+                return await self.get_card_entry_by_id(
+                    card_id=card.id, user_id=card_spec.user_id
+                )
 
     async def get_card_entry_by_id(self, *, card_id, user_id) -> Card:
         async with self.async_session() as session:
@@ -254,7 +258,6 @@ class TrainingDatabase:
                         select(Card)
                         .where(Card.user_id == user_id)
                         .where(Card.id == card_id)
-                        .options(selectinload(Card.trainings))
                     )
                     return result.scalars().one()
                 except NoResultFound:
@@ -268,7 +271,6 @@ class TrainingDatabase:
                 result = await session.execute(
                     select(Card)
                     .where(Card.user_id == user_id)
-                    .options(selectinload(Card.trainings))
                 )
                 return result.scalars().all()
 

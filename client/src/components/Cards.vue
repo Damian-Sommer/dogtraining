@@ -1,20 +1,18 @@
 <template>
   <table id="cardTable">
     <thead>
-      <tr>
-        <td>id</td>
+      <tr>        
+        <td>Kaufdatum</td>
         <td>Verfügbare Trainings</td>
         <td>Besuchte Trainings</td>
-        <td>Kaufdatum</td>
         <td>Kosten</td>
       </tr>
     </thead>
     <tbody>
-      <tr v-for="(card, index) in cards" :key="index">
-        <td>{{ card.id }}</td>
-        <td>{{ card.slots }}</td>
-        <td>1</td>
+      <tr v-for="(card, index) in cards" :key="card.id">
         <td>{{ new Date(card.timestamp).toLocaleDateString() }}</td>
+        <td>{{ card.slots }}</td>
+        <td>{{ card.trainings.length }}</td>
         <td>{{ card.cost }}</td>
       </tr>
     </tbody>
@@ -29,6 +27,7 @@ export default defineComponent({
   data() {
     return {
       cards: [],
+      interval: null,
     };
   },
   methods: {
@@ -42,9 +41,12 @@ export default defineComponent({
     this.fetch_all_cards();
   },
   mounted() {
-    setInterval(() => {
+    this.interval = setInterval(() => {
       this.fetch_all_cards();
     }, 4000);
+  },
+  unmounted() {
+    clearInterval(this.interval);
   },
 });
 </script>

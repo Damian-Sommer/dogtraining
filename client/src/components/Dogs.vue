@@ -2,13 +2,11 @@
   <table id="dogTable">
     <thead>
       <tr>
-        <td>id</td>
         <td>Name</td>
       </tr>
     </thead>
     <tbody>
-      <tr v-for="(dog, index) in dogs" :key="index">
-        <td>{{ dog.id }}</td>
+      <tr v-for="(dog, index) in dogs" :key="dog.id">
         <td>{{ dog.name }}</td>
       </tr>
     </tbody>
@@ -23,6 +21,7 @@ export default defineComponent({
   data() {
     return {
       dogs: [],
+      interval: null,
     };
   },
   methods: {
@@ -36,9 +35,12 @@ export default defineComponent({
     this.fetch_all_dogs();
   },
   mounted() {
-    setInterval(() => {
+    this.interval = setInterval(() => {
       this.fetch_all_dogs();
     }, 4000);
+  },
+  unmounted() {
+    clearInterval(this.interval);
   },
 });
 </script>

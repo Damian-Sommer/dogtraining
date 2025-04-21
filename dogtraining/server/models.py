@@ -20,8 +20,8 @@ class Training(Base):
     card_id = mapped_column(String, ForeignKey("card.id"), nullable=False)
     dog_id = mapped_column(String, ForeignKey("dog.id"), nullable=False)
 
-    card = relationship("Card", uselist=False, back_populates="trainings")
-    dog = relationship("Dog", uselist=False, back_populates="trainings")
+    card = relationship("Card", uselist=False, back_populates="trainings", lazy="selectin")
+    dog = relationship("Dog", uselist=False, back_populates="trainings", lazy="selectin")
 
     def as_dict(self):
         return dict(
@@ -31,7 +31,9 @@ class Training(Base):
             dog_id=self.dog_id,
             card_id=self.card_id,
             user_id=self.user_id,
+            dog=self.dog.as_dict()
         )
+
 
 
 class Card(Base):
@@ -45,7 +47,7 @@ class Card(Base):
     slots: Mapped[int] = mapped_column(Integer, nullable=False)
     user_id: Mapped[str] = mapped_column(String, nullable=False)
 
-    trainings = relationship("Training", back_populates="card")
+    trainings = relationship("Training", back_populates="card", lazy="selectin")
 
     def as_dict(self):
         return dict(
@@ -54,6 +56,7 @@ class Card(Base):
             cost=self.cost,
             slots=self.slots,
             user_id=self.user_id,
+            trainings=[training.as_dict() for training in self.trainings],
         )
 
 
@@ -67,7 +70,7 @@ class Dog(Base):
     name: Mapped[str] = mapped_column(String, nullable=False)
     user_id: Mapped[str] = mapped_column(String, nullable=False)
 
-    trainings = relationship("Training", back_populates="dog")
+    trainings = relationship("Training", back_populates="dog", lazy="selectin")
 
     def as_dict(self):
         return dict(

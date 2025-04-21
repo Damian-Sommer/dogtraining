@@ -2,20 +2,18 @@
   <table id="trainingTable">
     <thead>
       <tr>
-        <td>id</td>
+        <td>date</td>
         <td>type</td>
         <td>dog</td>
         <td>karte</td>
-        <td>date</td>
       </tr>
     </thead>
     <tbody>
       <tr v-for="(training, index) in trainings" :key="index">
-        <td>{{ training.id }}</td>
-        <td>{{ training.type }}</td>
-        <td>{{ training.dog_id }}</td>
-        <td>{{ training.card_id }}</td>
         <td>{{ new Date(training.timestamp).toLocaleDateString() }}</td>
+        <td>{{ training.type }}</td>
+        <td>{{ training.dog.name }}</td>
+        <td>{{ training.card_id }}</td>
       </tr>
     </tbody>
   </table>
@@ -29,6 +27,7 @@ export default defineComponent({
   data() {
     return {
       trainings: [],
+      interval: null,
     };
   },
   methods: {
@@ -42,9 +41,12 @@ export default defineComponent({
     this.fetch_all_trainings();
   },
   mounted() {
-    setInterval(() => {
+    this.interval = setInterval(() => {
       this.fetch_all_trainings();
     }, 4000);
+  },
+  unmounted() {
+    clearInterval(this.interval);
   },
 });
 </script>

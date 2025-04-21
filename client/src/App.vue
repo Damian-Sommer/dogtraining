@@ -20,6 +20,9 @@ import { routes } from "./index.js";
           </li>
         </ul>
       </nav>
+      <div class="foot">
+        <a id="github_logo" href="https://github.com/Damian-Sommer/dogtraining" target="_blank"><img src="../public/github.svg" alt="Github Repository"></a>
+      </div>
     </aside>
     <div class="view">
       <RouterView />
@@ -68,10 +71,22 @@ aside {
   width: 200px;
   height: 100%;
   background-color: aqua;
+  flex-direction: column;
 }
 nav {
-  height: 100%;
+  height: 80%;
   width: 100%;
+}
+.foot {
+  height: 20%;
+  display: flex;
+  align-items: center;
+  padding: 0 1em;
+}
+
+.foot #github_logo {
+  width: 50px;
+  height: 50px;
 }
 ul {
   color: black;

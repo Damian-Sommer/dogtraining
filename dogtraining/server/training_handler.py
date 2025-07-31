@@ -31,7 +31,7 @@ async def user_authentication(request, handler):
 @web.middleware
 async def cors_handler(request: web.Request, handler):
     cors_headers = {
-        "Access-Control-Allow-Origin": "http://localhost:5173",
+        "Access-Control-Allow-Origin": request.app["frontend_host_url"],
         "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type,Authorization,user_id",
     }

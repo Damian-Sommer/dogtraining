@@ -16,6 +16,11 @@ parser.add_argument(
     default="localhost",
     type=str,
 )
+parser.add_argument(
+    "--frontend_host_url",
+    default="http://localhost:5173",
+    type=str,
+)
 parser.add_argument("--port", default=5000, type=int)
 parser.add_argument(
     "--connection",
@@ -34,7 +39,7 @@ if __name__ == "__main__":
             user_authentication,
         ]
     )
-
+    app["frontend_host_url"] = args.frontend_host_url
     async def init_db(app):
         _logger.info("Start Initializing Database")
         training_database = TrainingDatabase(connection=args.connection)

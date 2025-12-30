@@ -35,6 +35,12 @@ async def cors_handler(request: web.Request, handler):
         "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type,Authorization,user_id",
     }
+    cors_handler = {
+        "Access-Control-Allow-Origin": request.app["frontend_host_url"],  # or specific origin
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Access-Control-Max-Age": "86400",
+    }
 
     if request.method == "OPTIONS":
         return web.Response(status=204, headers=cors_headers)

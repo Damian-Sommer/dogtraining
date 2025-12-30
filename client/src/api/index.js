@@ -137,6 +137,20 @@ class Dog extends API {
   }
 }
 
-export const dog_api = new Dog("http://127.0.0.1:5000");
-export const card_api = new Card("http://127.0.0.1:5000");
-export const training_api = new Training("http://127.0.0.1:5000");
+var dog_api = null;
+var card_api = null;
+var training_api = null;
+
+if (process.env.NODE_ENV === "development"){
+  dog_api = new Dog("http://127.0.0.1:5000");
+  card_api = new Card("http://127.0.0.1:5000");
+  training_api = new Training("http://127.0.0.1:5000");
+} else {
+  const server_url = `http://${import.meta.env.VITE_SERVER_IP}:${import.meta.env.VITE_SERVER_BACKEND_PORT}`;
+  dog_api = new Dog(server_url);
+  card_api = new Card(server_url);
+  training_api = new Training(server_url);
+}
+
+export {dog_api, card_api, training_api};
+

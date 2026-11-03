@@ -10,14 +10,23 @@ docker build -t dogtraining:test -f dogtraining.Dockerfile .
 docker run -v C:\\dev\\dogtraining\\test.db:/home/test.db -p 5555:50 -it dogtraining:test python -m dogtraining.server --connection=sqlite+aiosqlite:///home/test.db --frontend_host_url=http://localhost:8888 --port=50 --host=0.0.0.0
 ```
 
+```sh
+docker run -v $HOME/dev/dogtraining/test.db:/home/test.db -p 5555:5000 -it dogtraining:test python -m dogtraining.server --connection=sqlite+aiosqlite:///home/test.db --frontend_host_url=http://localhost:8888 --port=5000 --host=0.0.0.0
+```
+
 Dont add any slash at the end of the frontend_host_url parameter, if you do, the CORS header only applies this special url and not any other url part that has an addition at the end of the url. 
 
 # Client: 
 
 ```sh
-docker --debug build -t client:test -f client.Dockerfile .
+docker --debug build -t client:test -f client.Dockerfile --build-arg VITE_SERVER_IP=localhost --build-arg VITE_SERVER_BACKEND_PORT=5555 .
 ```
 
 ```sh
 docker run -p 8888:80 -it client:test
+```
+
+# Init DB:
+```sh
+python init_database.py --connection=sqlite+aiosqlite:////home/damian-sommer/dev/dogtraining/test.db
 ```

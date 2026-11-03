@@ -6,7 +6,6 @@ import attrs
 from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlalchemy.orm import selectinload
 
 from dogtraining.server.models import Card, Dog, Training
 

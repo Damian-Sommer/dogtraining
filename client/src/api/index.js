@@ -146,7 +146,7 @@ if (process.env.NODE_ENV === "development"){
   card_api = new Card("http://127.0.0.1:5000");
   training_api = new Training("http://127.0.0.1:5000");
 } else {
-  const server_url = `http://${import.meta.env.VITE_SERVER_IP}:${import.meta.env.VITE_SERVER_BACKEND_PORT}`;
+  const server_url = `http://${window.APP_CONFIG.SERVER_IP}:${window.APP_CONFIG.SERVER_BACKEND_PORT}`;
   dog_api = new Dog(server_url);
   card_api = new Card(server_url);
   training_api = new Training(server_url);

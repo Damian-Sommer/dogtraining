@@ -1,0 +1,33 @@
+services:
+  backend:
+    image: dogtraining:latest
+    container_name: dogtraining-backend
+    pull_policy: never
+    command: 
+    - python
+    - -m
+    - dogtraining.server
+    - --connection=sqlite+aiosqlite:///home/test.db 
+    - --frontend_host_url=http://localhost:8888 
+    - --port=50 
+    - --host=0.0.0.0
+    ports:
+      - "5555:50"
+    volumes:
+      - "${HOME}/dev/dogtraining/test.db:/home/test.db"
+    networks:
+      - dogtraining-network
+  client: 
+    image: client:latest
+    container_name: dogtraining-client
+    pull_policy: never
+    ports:
+      - "8888:80"
+    environment:
+      SERVER_IP: localhost
+      SERVER_BACKEND_PORT: 5555
+    networks:
+      - dogtraining-network
+networks:
+  dogtraining-network:
+    driver: bridge

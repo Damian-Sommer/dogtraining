@@ -1,3 +1,4 @@
+import logging
 import uuid
 from enum import StrEnum
 from typing import List
@@ -14,6 +15,8 @@ class TrainingType(StrEnum):
     UNTERORDNUNGSSPAZIERGANG = "unterordnungsspaziergang"
     QUERBEET = "querbeet"
     ALLTAGSSPAZIERGANG = "alltagsspaziergang"
+    Pferdespaziergang = "pferdespaziergang"
+    Hoopers_Agility = "hoopers_agility"
 
 
 @attrs.define
@@ -164,6 +167,9 @@ class DogSpec:
         )
 
 
+_logger = logging.getLogger(__name__)
+
+
 class TrainingDatabase:
     def __init__(self, connection):
         engine = create_async_engine(connection)
@@ -227,8 +233,7 @@ class TrainingDatabase:
         async with self.async_session() as session:
             async with session.begin():
                 result = await session.execute(
-                    select(Training)
-                    .where(Training.user_id == user_id)
+                    select(Training).where(Training.user_id == user_id)
                 )
                 return result.scalars().all()
 
@@ -268,8 +273,7 @@ class TrainingDatabase:
         async with self.async_session() as session:
             async with session.begin():
                 result = await session.execute(
-                    select(Card)
-                    .where(Card.user_id == user_id)
+                    select(Card).where(Card.user_id == user_id)
                 )
                 return result.scalars().all()
 
@@ -305,6 +309,27 @@ class TrainingDatabase:
                     raise DogNotFound(
                         f"The requested dog entry with id: {dog_id} does not exist"
                     )
+
+    async def update_dog_entry(self, *, dog_id: str, dog_spec: DogSpec) -> Dog:
+        async with self.async_session() as session:
+            async with session.begin():
+                dog = await session.execute(
+                    select(Dog)
+                    .where(Dog.user_id == dog_spec.user_id)
+                    .where(Dog.id == dog_id)
+                )
+
+                dog = dog.scalars().one_or_none()
+
+                if dog is None:
+                    raise DogNotFound(
+                        f"The requested dog entry with id: {dog_id} does not exist"
+                    )
+
+                dog.registration_time = dog_spec.registration_time
+                dog.name = dog_spec.name
+
+                return dog
 
     async def get_all_dogs(self, *, user_id):
         async with self.async_session() as session:

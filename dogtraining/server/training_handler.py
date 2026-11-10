@@ -11,6 +11,8 @@ from dogtraining.server.training_database import (
     TrainingDatabase,
     TrainingSpec,
     TrainingType,
+    DogNotFound,
+    TrainingSpecInvalid,
 )
 
 
@@ -36,7 +38,9 @@ async def cors_handler(request: web.Request, handler):
         "Access-Control-Allow-Headers": "Content-Type,Authorization,user_id",
     }
     cors_handler = {
-        "Access-Control-Allow-Origin": request.app["frontend_host_url"],  # or specific origin
+        "Access-Control-Allow-Origin": request.app[
+            "frontend_host_url"
+        ],  # or specific origin
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
         "Access-Control-Max-Age": "86400",
@@ -123,7 +127,7 @@ class TrainingHandler:
             return web.json_response(
                 data=[training.as_dict() for training in trainings]
             )
-        except (InvalidPayload, CardNotFound, CardFull) as e:
+        except (InvalidPayload, CardNotFound, CardFull, TrainingSpecInvalid) as e:
             return web.json_response(
                 status=400,
                 data={
@@ -144,6 +148,30 @@ class TrainingHandler:
             )
             return web.json_response(data=dog.as_dict())
         except (InvalidPayload, DogSpecInvalid) as e:
+            return web.json_response(
+                status=400,
+                data={
+                    "error": str(e),
+                },
+            )
+
+    async def update_dog_entry(self, request: web.Request):
+        try:
+            dog_id = request.match_info["id"]
+
+            dog_spec = DogSpec.from_json(
+                data=await request.json(),
+                user_id=request.headers.get("user_id"),
+            )
+
+            dog = await self._training_database.update_dog_entry(
+                dog_id=dog_id,
+                dog_spec=dog_spec,
+            )
+
+            return web.json_response(data=dog.as_dict())
+
+        except (InvalidPayload, DogSpecInvalid, DogNotFound) as e:
             return web.json_response(
                 status=400,
                 data={

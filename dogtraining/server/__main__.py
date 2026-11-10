@@ -31,7 +31,7 @@ parser.add_argument(
 _logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     args = parser.parse_args()
     app = web.Application(
         middlewares=[
@@ -40,6 +40,7 @@ if __name__ == "__main__":
         ]
     )
     app["frontend_host_url"] = args.frontend_host_url
+
     async def init_db(app):
         _logger.info("Start Initializing Database")
         training_database = TrainingDatabase(connection=args.connection)
@@ -58,6 +59,7 @@ if __name__ == "__main__":
                 web.post("/dogs", training_handler.create_dog_entry),
                 web.get("/dogs", training_handler.get_all_dogs),
                 web.get("/dogs/{id}", training_handler.get_dog_by_id),
+                web.put("/dogs/{id}", training_handler.update_dog_entry),
             ]
         )
         _logger.info("Finished Initializing Routes")

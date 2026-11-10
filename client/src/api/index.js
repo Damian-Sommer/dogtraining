@@ -114,6 +114,7 @@ class Dog extends API {
     if (!response.ok) {
       throw new Error(await response.json());
     }
+    return await response.json();
   }
 
   async get_all() {
@@ -134,6 +135,20 @@ class Dog extends API {
     if (!response.ok) {
       throw new Error(await response.json());
     }
+  }
+
+  async update_entry(id, registration_time, name) {
+    const response = await fetch(`${this.url}/dogs/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({ registration_time, name }),
+      headers: this.headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(await response.json());
+    }
+
+    return await response.json();
   }
 }
 

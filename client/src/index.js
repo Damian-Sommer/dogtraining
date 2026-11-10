@@ -6,6 +6,7 @@ import NewDog from "./components/NewDog.vue";
 import NewTraining from "./components/NewTraining.vue";
 import Trainings from "./components/Trainings.vue";
 import { createWebHistory, createRouter } from "vue-router";
+import UpdateDog from "./components/UpdateDog.vue";
 
 export const routes = [
   {
@@ -64,6 +65,14 @@ export const routes = [
       nav: false,
     },
   },
+  {
+    path: "/updateDog/:id",
+    name: "Hund anpassen",
+    component: UpdateDog,
+    meta: {
+      nav: false,
+    },
+  }
 ];
 
 const router = createRouter({

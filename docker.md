@@ -19,7 +19,7 @@ Dont add any slash at the end of the frontend_host_url parameter, if you do, the
 # Client: 
 
 ```sh
-docker --debug build -t client:test -f client.Dockerfile --build-arg VITE_SERVER_IP=localhost --build-arg VITE_SERVER_BACKEND_PORT=5555 .
+docker --debug build -t client:latest -f client.Dockerfile .
 ```
 
 ```sh

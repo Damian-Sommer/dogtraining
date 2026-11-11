@@ -21,8 +21,7 @@ async def test_create_training_entry_fails_because_of_invalid_type(
     with pytest.raises(
         TrainingSpecInvalid,
         match=re.escape(
-            f"The training type: {training_type}, is invalid,"
-            f" please use one of the valid types: {[v.value for v in TrainingType]}"
+            f"{training_type} of type: {type(training_type)} is not of type: {type(TrainingType)}"
         ),
     ):
         TrainingSpec(

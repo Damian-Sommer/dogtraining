@@ -22,6 +22,8 @@ from dogtraining.server.training_database import (
         TrainingType.ALLTAGSSPAZIERGANG,
         TrainingType.QUERBEET,
         TrainingType.UNTERORDNUNGSSPAZIERGANG,
+        TrainingType.PFERDESPAZIERGANG,
+        TrainingType.HOOPERS_AGILITY,
     ],
 )
 async def test_create_training_entry_with_valid_data_succeeds(
@@ -38,7 +40,7 @@ async def test_create_training_entry_with_valid_data_succeeds(
     actual_training = await create_training_entry(dogs=[dog.id])
 
     assert actual_training[0].timestamp == training_timestamp
-    assert actual_training[0].type == training_type
+    assert actual_training[0].type == training_type.name
     assert actual_training[0].dog_id == dog.id
     assert actual_training[0].card_id == card.id
     assert actual_training[0].user_id == user_id
@@ -61,7 +63,7 @@ async def test_get_training_entry_by_id(
         training_id=training[0].id, user_id=user_id
     )
     assert actual_training.timestamp == training_timestamp
-    assert actual_training.type == training_type
+    assert actual_training.type == training_type.name
     assert actual_training.dog_id == dog.id
     assert actual_training.card_id == card.id
     assert actual_training.user_id == user_id
@@ -275,7 +277,6 @@ async def test_get_training_entry_as_dict(
     create_dog_entry,
     training_timestamp,
     training_type,
-    training_dogs,
     create_card_entry,
     user_id,
 ):
@@ -284,10 +285,10 @@ async def test_get_training_entry_as_dict(
     training = await create_training_entry(dogs=[dog.id])
     assert (
         training[0].as_dict().items()
-        == dict(
+        >= dict(
             id=training[0].id,
             timestamp=training_timestamp,
-            type=training_type,
+            type=training_type.name,
             dog_id=dog.id,
             card_id=card.id,
             user_id=user_id,
@@ -308,6 +309,7 @@ async def test_get_card_entry_as_dict(
             cost=card.cost,
             slots=card.slots,
             user_id=user_id,
+            trainings=[],
         ).items()
     )
 

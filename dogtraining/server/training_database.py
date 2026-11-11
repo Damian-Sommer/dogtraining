@@ -1,6 +1,6 @@
 import logging
 import uuid
-from enum import StrEnum
+from enum import Enum
 from typing import List
 
 import attrs
@@ -11,12 +11,12 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from dogtraining.server.models import Card, Dog, Training
 
 
-class TrainingType(StrEnum):
-    UNTERORDNUNGSSPAZIERGANG = "unterordnungsspaziergang"
-    QUERBEET = "querbeet"
-    ALLTAGSSPAZIERGANG = "alltagsspaziergang"
-    Pferdespaziergang = "pferdespaziergang"
-    Hoopers_Agility = "hoopers_agility"
+class TrainingType(Enum):
+    UNTERORDNUNGSSPAZIERGANG = "Unterordnungsspaziergang"
+    QUERBEET = "Querbeet"
+    ALLTAGSSPAZIERGANG = "Alltagsspaziergang"
+    PFERDESPAZIERGANG = "Pferdespaziergang"
+    HOOPERS_AGILITY = "Hoopers / Agility"
 
 
 @attrs.define
@@ -28,9 +28,13 @@ class TrainingSpec:
 
     @type.validator
     def check_type(self, attribute, value):
-        if value not in list(TrainingType):
+        if not isinstance(value, TrainingType):
             raise TrainingSpecInvalid(
-                f"The training type: {value}, is invalid, please use one of the valid types: {[v.value for v in TrainingType]}"
+                f"{value} of type: {type(value)} is not of type: {type(TrainingType)}"
+            )
+        elif value.name not in [v.name for v in TrainingType]:
+            raise TrainingSpecInvalid(
+                f"The training type: {value.name}, is invalid, please use one of the valid types: {[v.name for v in TrainingType]}"
             )
 
     @timestamp.validator
@@ -68,9 +72,17 @@ class TrainingSpec:
                 )
         return cls(
             timestamp=data["timestamp"],
-            type=data["type"],
+            type=TrainingType[data["type"]],
             dogs=data["dogs"],
             user_id=user_id,
+        )
+
+    def to_dict(self):
+        return dict(
+            timestamp=self.timestamp,
+            type=self.type.name,
+            dogs=self.dogs,
+            user_id=self.user_id,
         )
 
 
@@ -197,7 +209,7 @@ class TrainingDatabase:
                         Training(
                             id=str(uuid.uuid4()),
                             timestamp=training_spec.timestamp,
-                            type=str(training_spec.type),
+                            type=training_spec.type.name,
                             dog_id=dog_id,
                             card_id=free_slots_per_card.pop(0),
                             user_id=training_spec.user_id,

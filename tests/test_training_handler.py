@@ -162,7 +162,7 @@ async def test_create_training_entry_but_card_does_not_exist(
         user_id=user_id,
     )
     response = await client.post(
-        "/trainings", json=attrs.asdict(training_spec), headers={"user_id": user_id}
+        "/trainings", json=training_spec.to_dict(), headers={"user_id": user_id}
     )
     assert response.status == 400
     assert await response.json() == {
@@ -176,7 +176,6 @@ async def test_create_training_entry_with_valid_data_succeeds(
     training_timestamp,
     create_dog_entry,
     training_type,
-    training_dogs,
     user_id,
 ):
     dog = await create_dog_entry()
@@ -188,13 +187,13 @@ async def test_create_training_entry_with_valid_data_succeeds(
         user_id=user_id,
     )
     response = await client.post(
-        "/trainings", json=attrs.asdict(training_spec), headers={"user_id": user_id}
+        "/trainings", json=training_spec.to_dict(), headers={"user_id": user_id}
     )
     assert response.status == 200
     assert (await response.json())[0].items() >= dict(
         timestamp=training_timestamp,
         dog_id=dog.id,
-        type=training_type,
+        type=training_type.name,
     ).items()
 
 
@@ -213,7 +212,7 @@ async def test_create_training_entry_but_card_will_be_overflown_raises_exception
         user_id=user_id,
     )
     response = await client.post(
-        "/trainings", json=attrs.asdict(training_spec), headers={"user_id": user_id}
+        "/trainings", json=training_spec.to_dict(), headers={"user_id": user_id}
     )
     assert response.status == 400
     assert await response.json() == {
@@ -240,7 +239,7 @@ async def test_create_two_training_entries_with_two_card_entries(
         user_id=user_id,
     )
     response = await client.post(
-        "/trainings", json=attrs.asdict(training_spec), headers={"user_id": user_id}
+        "/trainings", json=training_spec.to_dict(), headers={"user_id": user_id}
     )
     assert response.status == 200
     response_json = await response.json()
@@ -249,7 +248,7 @@ async def test_create_two_training_entries_with_two_card_entries(
         >= dict(
             timestamp=training_timestamp,
             dog_id=dog.id,
-            type=training_type,
+            type=training_type.name,
             card_id=card.id,
             user_id=user_id,
         ).items()
@@ -259,7 +258,7 @@ async def test_create_two_training_entries_with_two_card_entries(
         >= dict(
             timestamp=training_timestamp,
             dog_id=dog2.id,
-            type=training_type,
+            type=training_type.name,
             card_id=card_new.id,
             user_id=user_id,
         ).items()

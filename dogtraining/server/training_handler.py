@@ -5,14 +5,14 @@ from dogtraining.server.training_database import (
     CardNotFound,
     CardSpec,
     DatabaseException,
+    DogNotFound,
     DogSpec,
     DogSpecInvalid,
     InvalidPayload,
     TrainingDatabase,
     TrainingSpec,
-    TrainingType,
-    DogNotFound,
     TrainingSpecInvalid,
+    TrainingType,
 )
 
 

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "backend": "cd .. && python -m server --connection=sqlite+aiosqlite:///home/damian-sommer/dev/dogtraining/test.db",
+    "backend": "cd .. && python3 -m dogtraining.server --connection=sqlite+aiosqlite:////home/damian-sommer/dev/dogtraining/test.db",
     "build": "vite build",
     "preview": "vite preview",
     "prettify": "prettier --write ."
